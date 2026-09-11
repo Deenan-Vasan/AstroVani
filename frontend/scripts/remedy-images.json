@@ -1,0 +1,6 @@
+{
+  "//": "Populate with image URLs you have cleared for use. Keys are the filenames the UI looks for in public/remedies/ (without extension). Run: npm run setup:remedy-images",
+  "images": {
+    "temple": ""
+  }
+}

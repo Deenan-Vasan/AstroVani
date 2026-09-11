@@ -1,0 +1,822 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #f7f3ff;
+  background: #070610;
+  font-synthesis: none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 1180px; min-height: 100vh; background:
+  radial-gradient(circle at 55% 18%, rgba(116, 68, 167, .2), transparent 26%),
+  radial-gradient(circle at 78% 70%, rgba(36, 113, 132, .12), transparent 24%),
+  #070610; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+.app-shell { min-height: 100vh; background-image: linear-gradient(rgba(255,255,255,.012) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.012) 1px, transparent 1px); background-size: 42px 42px; }
+.topbar { height: 72px; padding: 0 24px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; border-bottom: 1px solid #2a2039; background: rgba(8,7,16,.86); backdrop-filter: blur(18px); position: sticky; top: 0; z-index: 20; }
+.brand-wrap { display: flex; gap: 12px; align-items: center; }
+.brand-mark { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg,#8b5cf6,#d6ad5c); box-shadow: 0 0 28px rgba(139,92,246,.35); }
+.brand { font-weight: 750; letter-spacing: .2px; color: #dfc47f; font-size: 18px; }.brand-sub { color: #766d8e; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px; }
+.journey-pill,.live-chip,.ghost-btn { border: 1px solid #3b2e4c; background: rgba(28,22,39,.78); color: #aa9ebe; border-radius: 999px; padding: 8px 13px; font-size: 12px; }
+.topbar-actions { justify-self: end; display: flex; gap: 9px; align-items: center; }.live-dot { width: 7px; height: 7px; background: #42d087; border-radius: 50%; display: inline-block; box-shadow: 0 0 14px #42d087; margin-right: 5px; }
+.app-main { display: grid; grid-template-columns: 176px minmax(720px, 1fr) 300px; gap: 18px; padding: 18px; height: calc(100vh - 72px); }
+.glass-panel { background: linear-gradient(180deg, rgba(25,19,36,.87), rgba(12,10,20,.83)); border: 1px solid rgba(111,88,140,.35); border-radius: 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 18px 70px rgba(0,0,0,.18); backdrop-filter: blur(16px); }
+.journey-rail { padding: 18px 10px; align-self: stretch; }.eyebrow { color: #a78bfa; letter-spacing: 1.8px; font-size: 10px; font-weight: 800; margin-bottom: 12px; }
+.journey-item { width: 100%; border: 0; background: transparent; color: #71677e; display: grid; grid-template-columns: 26px 30px 1fr; align-items: center; gap: 6px; text-align: left; padding: 12px 8px; border-radius: 10px; margin: 4px 0; transition: .2s; }.journey-item:hover,.journey-item.active { background: rgba(111,75,155,.18); color: #eadff9; }.journey-item.active { box-shadow: inset 2px 0 #d1a95c; }.journey-index { font-size: 9px; color: #665a74; }.journey-icon { font-size: 16px; }
+.guide-panel { padding: 18px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }.guide-head { display: flex; align-items: center; gap: 12px; }.avatar-orb { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 50%; font-size: 27px; background: radial-gradient(circle at 30% 20%, #734cb6, #1d142d); box-shadow: 0 0 32px rgba(130,77,194,.35); }.guide-head h3 { margin: 0 0 4px; }.status-row { color: #6e8f7f; font-size: 11px; }.guide-prompt { color: #c4b8d2; line-height: 1.55; font-size: 13px; padding: 14px 0; border-bottom: 1px solid #2b2138; }.transcript-stack { display: grid; gap: 8px; flex: 1; min-height: 150px; max-height: none; overflow-y: auto; overflow-x: hidden; padding-right: 4px; scrollbar-width: thin; scrollbar-color: #4a385b transparent; }.transcript-line { background: rgba(24,18,34,.72); border: 1px solid #2e2440; padding: 10px; border-radius: 10px; color: #8e829f; font-size: 11px; line-height: 1.45; }.media-controls { display: flex; gap: 7px; margin-top: 14px; }.media-controls button { width: 44px; height: 38px; border: 1px solid #3d3050; border-radius: 10px; background: #191322; color: #c5b8d5; }.media-controls .danger { color: #f19a9a; border-color: #5d2930; }
+.stage { min-width: 0; overflow: auto; padding: 2px; }.birth-card { max-width: 850px; margin: 6vh auto; padding: 38px; background: radial-gradient(circle at 75% 30%, rgba(125,80,174,.2), transparent 34%), linear-gradient(180deg,rgba(24,18,34,.92),rgba(9,8,16,.95)); }.birth-card h1,.scene-copy h2 { margin: 0; font-family: Georgia, serif; font-weight: 500; letter-spacing: -.4px; }.birth-card h1 { font-size: 42px; max-width: 700px; }.birth-card p,.scene-copy p { color: #8d829c; line-height: 1.65; }.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 24px 0; }.form-grid label { color: #9488a4; font-size: 11px; display: grid; gap: 7px; text-transform: uppercase; letter-spacing: .9px; }.form-grid input,.form-grid select { width: 100%; border: 1px solid #3c304d; background: #0e0b15; color: #e8dff0; border-radius: 10px; padding: 12px 13px; outline: none; }.form-grid input:focus,.form-grid select:focus { border-color: #8b5cf6; }.primary-btn { border: 1px solid rgba(233,202,132,.55); background: linear-gradient(135deg,#3d275e,#87672e); color: #fff3d7; border-radius: 11px; padding: 12px 17px; font-weight: 700; box-shadow: 0 10px 30px rgba(92,58,126,.22); }.primary-btn:disabled { opacity: .45; cursor: default; }
+.scene-wrap { min-height: 100%; position: relative; padding: 12px 4px 28px; }.scene-copy { text-align: center; margin: 4px auto 12px; max-width: 720px; }.scene-copy h2 { font-size: 31px; }.scene-copy p { margin: 8px 0 0; font-size: 13px; }.cosmic-canvas { height: 470px; border-radius: 18px; overflow: hidden; border: 1px solid #33263f; background: radial-gradient(circle,#160f21,#06050c 62%); position: relative; box-shadow: 0 0 80px rgba(86,46,120,.18); }.canvas-caption { position: absolute; right: 12px; bottom: 10px; font-size: 10px; color: #625772; }.planet-strip { display: grid; grid-template-columns: repeat(5,1fr); gap: 9px; margin-top: 10px; }.planet-card { border: 1px solid #33263f; background: rgba(16,12,24,.8); border-radius: 12px; padding: 10px; display: grid; gap: 3px; }.planet-card strong { color: #e1ca94; }.planet-card span { color: #91859f; font-size: 11px; }.planet-card small { color: #655a72; }.scene-next { display: block; margin: 15px auto 0; }
+.kundli-layout,.palm-layout { display: grid; grid-template-columns: 1.25fr .75fr; gap: 14px; margin-top: 18px; }.kundli-board { min-height: 470px; display: grid; place-items: center; padding: 18px; }.kundli-board svg { width: min(84%,430px); filter: drop-shadow(0 0 24px rgba(139,92,246,.18)); animation: kundliIn .8s ease-out; }.chart-summary,.palm-result { padding: 22px; }.metric { display: flex; justify-content: space-between; border-bottom: 1px solid #2d233a; padding: 13px 0; color: #887c96; font-size: 12px; }.metric strong { color: #ded0e8; }.chart-note { margin-top: 18px; border: 1px solid #3b304a; border-radius: 10px; background: #14101c; padding: 13px; color: #867b93; font-size: 11px; line-height: 1.5; }
+.camera-stage { min-height: 485px; position: relative; overflow: hidden; display: grid; place-items: center; }.camera-stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: .72; }.camera-placeholder { display: grid; place-items: center; gap: 12px; color: #74677f; font-size: 70px; }.camera-placeholder span { font-size: 13px; }.hand-guide { position: absolute; width: 52%; height: 74%; border: 1px dashed rgba(222,196,137,.7); border-radius: 44% 44% 42% 42%; display: grid; place-items: center; box-shadow: 0 0 45px rgba(205,172,95,.08); }.hand-outline { opacity: .24; font-size: 120px; }.camera-status { position: absolute; left: 16px; top: 14px; background: rgba(5,5,10,.72); border: 1px solid #32263e; color: #a49aaf; padding: 7px 10px; border-radius: 999px; font-size: 10px; }.camera-actions { position: absolute; bottom: 16px; display: flex; gap: 8px; }.palm-result h3 { margin: 4px 0 8px; }.palm-result p { color: #8d819a; font-size: 12px; line-height: 1.55; }.line-list { display: grid; gap: 8px; margin-top: 14px; }.line-card { border: 1px solid #342840; border-radius: 10px; padding: 9px 10px; display: grid; grid-template-columns: 1fr auto; gap: 3px; }.line-card strong { color: #ddc789; }.line-card span { color: #8d7fa0; font-size: 10px; text-transform: uppercase; }.line-card small { grid-column: 1 / -1; color: #776c82; line-height: 1.4; }.empty-result { min-height: 380px; display: grid; place-items: center; text-align: center; color: #655b71; }.disclaimer { margin-top: 14px; color: #655c70; font-size: 9px; line-height: 1.4; }
+.timeline { height: 180px; position: relative; margin-top: 28px; padding: 30px; overflow: hidden; }.timeline-line { position: absolute; left: 7%; right: 7%; top: 88px; height: 2px; background: linear-gradient(90deg,#3a2d49,#7e5b9a,#d2ad59,#5e486f); box-shadow: 0 0 18px rgba(210,173,89,.25); }.timeline-node { position: absolute; top: 61px; transform: translateX(-50%); text-align: center; color: #736780; font-size: 10px; }.timeline-node strong { display: block; margin-top: 25px; white-space: nowrap; }.node-dot { width: 13px; height: 13px; display: block; margin: 20px auto 0; border-radius: 50%; background: #5c496d; border: 2px solid #18101f; box-shadow: 0 0 0 2px #5c496d; }.timeline-node.now .node-dot { background: #d0aa57; box-shadow: 0 0 20px #d0aa57; }.timeline-node.now strong { color: #e8d19d; }.branch-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 11px; margin-top: 12px; }.branch-card { padding: 16px; min-height: 205px; }.branch-icon { color: #b18cdf; }.branch-card h3 { margin: 8px 0; }.branch-card p { color: #776c84; font-size: 11px; line-height: 1.45; min-height: 46px; }.tag-row { display: flex; flex-wrap: wrap; gap: 5px; }.tag-row span { border: 1px solid #342841; background: #140f1d; border-radius: 999px; color: #91829f; padding: 4px 7px; font-size: 9px; }
+@keyframes kundliIn { from { transform: scale(.65) rotate(-8deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+@media (max-width: 1280px) { body { min-width: 1020px; } .app-main { grid-template-columns: 150px 1fr 265px; } .branch-grid { grid-template-columns: repeat(2,1fr); } }
+
+/* Live Agora milestone */
+.status-dot { width: 7px; height: 7px; display: inline-block; border-radius: 50%; background: #756982; margin-right: 5px; }
+.status-row.connecting { color: #d7b86b; }.status-row.connected { color: #6fc69b; }.status-row.error { color: #e98d95; }
+.channel-chip { margin: 0 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid #342840; border-radius: 8px; padding: 7px 9px; color: #837690; font-size: 9px; }
+.integration-error { margin: 0 0 10px; border: 1px solid #5f303a; background: rgba(91,34,48,.25); color: #e3a1aa; border-radius: 9px; padding: 9px; font-size: 10px; line-height: 1.4; }
+.session-action-row { margin-top: 12px; }.connect-btn { width: 100%; padding: 10px 11px; font-size: 11px; }
+.media-controls button:disabled { cursor: default; opacity: .32; }.media-controls .disabled-media { border-color: #5d2930; color: #e59b9b; }
+.rtc-video-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 14px 0 4px; }
+.rtc-video-tile { position: relative; aspect-ratio: 4/3; overflow: hidden; border: 1px solid #342840; border-radius: 10px; background: #09070e; }
+.rtc-video-surface { position: absolute; inset: 0; }.rtc-video-surface > div, .rtc-video-surface video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
+.rtc-video-tile > span { position: absolute; left: 6px; bottom: 5px; z-index: 3; padding: 2px 5px; border-radius: 5px; background: rgba(0,0,0,.58); color: #d2c6df; font-size: 8px; }
+.rtc-video-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: #5f536d; font-size: 9px; letter-spacing: .6px; text-transform: uppercase; }
+.navagraha-strip { grid-template-columns: repeat(9, minmax(122px, 1fr)); overflow-x: auto; padding-bottom: 5px; scrollbar-width: thin; scrollbar-color: #443451 transparent; }
+.planet-label-3d { pointer-events: none; white-space: nowrap; font-size: 10px; color: #d5c9e1; text-shadow: 0 1px 6px #000, 0 0 12px #000; transform: translateY(-15px); display: block; }
+.planet-label-3d.sun-label { color: #f4d895; transform: translateY(-26px); }
+
+/* Voice-first Arrival milestone */
+.voice-first-arrival { max-width: 900px; }
+.arrival-lede { max-width: 720px; margin-bottom: 24px; }
+.voice-start-panel { display: grid; grid-template-columns: 58px minmax(0,1fr) auto; align-items: center; gap: 15px; border: 1px solid #3c2f4d; background: linear-gradient(135deg,rgba(51,34,70,.72),rgba(18,13,27,.88)); border-radius: 14px; padding: 16px; margin: 22px 0 14px; }
+.voice-orb { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; color: #fff1c9; font-size: 22px; background: radial-gradient(circle at 30% 20%,#8a5ed0,#362047 64%,#1a1125); box-shadow: 0 0 28px rgba(144,91,203,.3); }
+.voice-start-copy { display: grid; gap: 4px; min-width: 0; }.voice-start-copy strong { color: #eee4f7; font-size: 14px; }.voice-start-copy span { color: #857991; font-size: 11px; line-height: 1.45; }
+.hero-start-btn { min-width: 210px; white-space: nowrap; }
+.typed-fallback { text-align: center; margin: 14px 0 0; }.text-link-btn { border: 0; background: transparent; color: #a998b7; font-size: 11px; text-decoration: underline; text-decoration-color: #4d3d5d; text-underline-offset: 4px; }.text-link-btn:hover { color: #dfcaea; }
+.typed-form-wrap { margin-top: 15px; border-top: 1px solid #2d2339; padding-top: 4px; }.typed-submit { border-radius: 10px; }
+.profile-progress-card { border: 1px solid #322640; border-radius: 12px; background: rgba(12,9,18,.62); padding: 13px 14px; margin-top: 12px; }.profile-progress-title { display: flex; justify-content: space-between; color: #9c8cab; text-transform: uppercase; letter-spacing: .8px; font-size: 9px; margin-bottom: 10px; }.profile-progress-title small { color: #6f637b; }
+.profile-progress-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }.profile-progress-item { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid #2d2338; border-radius: 9px; color: #62576e; }.profile-progress-item.complete { border-color: #3b5a49; background: rgba(44,93,65,.12); }.profile-check { color: #786b84; }.profile-progress-item.complete .profile-check { color: #55ce8b; }.profile-progress-item div { display: grid; min-width: 0; }.profile-progress-item strong { color: #a99db5; font-size: 9px; text-transform: uppercase; letter-spacing: .5px; }.profile-progress-item small { color: #685e73; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }.profile-progress-item.complete small { color: #9f94aa; }
+.mini-profile-progress { border: 1px solid #30243c; background: rgba(15,11,22,.72); border-radius: 9px; padding: 9px; margin: 0 0 10px; }.mini-profile-progress > div:first-child { display: flex; justify-content: space-between; color: #8f829d; font-size: 9px; text-transform: uppercase; letter-spacing: .7px; }.mini-profile-progress small { color: #655a72; }.mini-profile-dots { display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; margin-top: 7px; }.mini-profile-dots i { height: 3px; border-radius: 999px; background: #30263a; }.mini-profile-dots i.done { background: #4ec987; box-shadow: 0 0 8px rgba(78,201,135,.2); }
+.ready-note { margin-top: 12px; border: 1px solid #30243c; background: rgba(16,12,23,.7); color: #6f647b; border-radius: 9px; padding: 9px; font-size: 9px; line-height: 1.45; }.ready-note strong { color: #b5a5c2; }.end-session-btn { width: 100%; }
+.transcript-line.user-line { border-color: #3b3455; color: #b7a8ca; }.transcript-line.agent-line { border-color: #403348; color: #c7b9d0; background: rgba(31,22,37,.75); }.transcript-line.system-line { color: #665b71; font-size: 9px; }
+
+/* Consolidated Cosmic Journey refinements */
+.journey-coverage { margin: 16px 8px 0; padding-top: 12px; border-top: 1px solid #2d2339; color: #5f556b; font-size: 9px; line-height: 1.45; }
+.planet-card { text-align: left; color: inherit; }
+.planet-card.active { border-color: #8f6ab5; background: linear-gradient(180deg,rgba(67,42,85,.78),rgba(19,13,28,.9)); box-shadow: 0 0 24px rgba(139,92,246,.16); }
+.planet-label-3d.active { color: #fff1c9; font-weight: 800; text-shadow: 0 0 9px #8b5cf6, 0 1px 7px #000; }
+.birth-sky-narration { position: absolute; left: 18px; top: 18px; z-index: 4; width: min(370px,44%); padding: 14px 15px; border: 1px solid rgba(130,97,161,.42); border-radius: 13px; background: linear-gradient(135deg,rgba(12,8,20,.88),rgba(33,19,46,.78)); backdrop-filter: blur(12px); box-shadow: 0 14px 44px rgba(0,0,0,.25); pointer-events: none; }
+.birth-sky-narration > span { color: #a68ad0; font-size: 8px; font-weight: 800; letter-spacing: 1.4px; }
+.birth-sky-narration strong { display: block; margin-top: 3px; color: #f0d79a; font-size: 18px; }
+.birth-sky-narration p { margin: 6px 0 9px; color: #a99eb5; font-size: 10px; line-height: 1.55; }
+.reveal-progress { display: grid; grid-template-columns: repeat(9,1fr); gap: 5px; }.reveal-progress i { height: 3px; border-radius: 999px; background: #2e2538; }.reveal-progress i.done { background: linear-gradient(90deg,#7651a3,#d0aa57); box-shadow: 0 0 9px rgba(208,170,87,.22); }
+.birth-sky-story-note { margin: 9px auto 0; max-width: 850px; color: #786c84; font-size: 10px; line-height: 1.55; text-align: center; }
+.transcript-stack { scroll-behavior: smooth; }
+.transcript-line { animation: transcriptIn .18s ease-out; }
+@keyframes transcriptIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.transcript-empty { border: 1px dashed #30253c; border-radius: 10px; padding: 12px; color: #5f556c; font-size: 9px; text-align: center; }
+.birth-sky-context { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 0 auto 10px; }.birth-sky-context span,.birth-sky-context strong { border: 1px solid #33273f; background: rgba(17,12,25,.72); border-radius: 999px; padding: 5px 9px; font-size: 9px; color: #887b95; }.birth-sky-context strong { color: #b89b63; font-weight: 600; }
+
+/* Palmistry V1: freeze a palm-only crop after capture and synchronize illustrative line traces. */
+.camera-stage.captured { background: #070710; }
+.camera-stage .captured-palm { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; filter: saturate(.9) contrast(1.04); }
+.palm-line-overlay { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+/* Traces are drawn as a dark halo path with the colored stroke on top, so every line
+   stays legible against skin tone without needing voice focus to become visible. */
+.palm-trace path { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: opacity .28s ease, stroke .28s ease, stroke-width .28s ease, filter .28s ease; }
+.palm-trace .palm-trace-halo { stroke: rgba(4,3,10,.82); stroke-width: 5.4; }
+.palm-trace .palm-trace-stroke { stroke: rgba(255,232,180,.94); stroke-width: 2.4; }
+.palm-trace.dimmed { opacity: .45; }
+.palm-trace.active .palm-trace-halo { stroke-width: 7.6; }
+.palm-trace.active .palm-trace-stroke { stroke-width: 4; filter: drop-shadow(0 0 6px rgba(255,205,92,.8)) drop-shadow(0 0 14px rgba(185,125,255,.45)); stroke-dasharray: 900; stroke-dashoffset: 900; animation: tracePalmLine .9s ease forwards; }
+.palm-trace text { fill: #ffeec2; font-size: 2.7px; font-weight: 700; paint-order: stroke; stroke: rgba(6,4,12,.92); stroke-width: 1.5px; opacity: .8; }
+.palm-trace.active text { fill: #fff6da; font-size: 3.2px; opacity: 1; }
+.palm-trace.dimmed text { opacity: .5; }
+.line-card.active { border-color: rgba(226,194,117,.8); background: linear-gradient(135deg, rgba(92,54,116,.42), rgba(116,82,29,.22)); box-shadow: 0 0 20px rgba(199,151,74,.12); }
+.line-card.active strong { color: #ffe19a; }
+@keyframes tracePalmLine { to { stroke-dashoffset: 0; } }
+
+/* Palm capture validation + guided focus viewport */
+.camera-stage.validating video { opacity: .9; filter: saturate(.82) contrast(1.03); }
+.camera-dim-mask { position: absolute; inset: 0; pointer-events: none; background: rgba(4,3,10,.5); }
+.camera-stage.validating .hand-guide { z-index: 3; width: 54%; height: 78%; border: 2px solid rgba(210,190,145,.58); border-radius: 42% 42% 36% 36%; box-shadow: 0 0 0 9999px rgba(3,2,9,.28), inset 0 0 50px rgba(244,217,151,.05), 0 0 30px rgba(177,135,255,.08); background: transparent; transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+.camera-stage.validating .hand-guide.ready { border-color: rgba(116,236,177,.95); box-shadow: 0 0 0 9999px rgba(3,2,9,.3), inset 0 0 55px rgba(99,230,163,.06), 0 0 34px rgba(92,235,167,.28); }
+.palm-guide-copy { align-self: end; margin-bottom: 22px; display: grid; gap: 4px; justify-items: center; padding: 8px 12px; border-radius: 12px; background: rgba(5,5,11,.58); backdrop-filter: blur(7px); color: #d8c7ea; font-size: 11px; text-align: center; }
+.palm-guide-copy strong { color: #f2dea2; font-size: 13px; }
+.hand-guide.ready .palm-guide-copy strong { color: #8cf0bc; }
+.palm-guide-copy span { color: #9b8ba8; font-size: 9px; }
+.palm-readiness { position: absolute; z-index: 4; left: 16px; right: 16px; bottom: 76px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; pointer-events: none; }
+.palm-readiness span { padding: 5px 8px; border: 1px solid rgba(86,73,101,.72); border-radius: 999px; background: rgba(8,7,14,.76); color: #756d80; font-size: 9px; backdrop-filter: blur(8px); }
+.palm-readiness span.ok { border-color: rgba(84,207,146,.48); color: #83dfae; }
+.camera-stage .camera-status { z-index: 5; max-width: calc(100% - 32px); }
+.camera-stage .camera-status.ready { border-color: rgba(84,207,146,.5); color: #8ce4b5; }
+.camera-stage .camera-actions { z-index: 6; }
+.camera-stage .camera-actions .primary-btn:disabled { opacity: .38; cursor: not-allowed; filter: grayscale(.25); }
+.camera-stage.captured .captured-palm { object-fit: cover; object-position: center; filter: saturate(.84) contrast(1.08) brightness(.94); }
+.camera-stage.captured::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 80px rgba(4,3,10,.45); }
+.palm-line-overlay { z-index: 3; }
+
+/* 2026-08-21 premium Birth Sky + guide video redesign */
+.app-main { grid-template-columns: 176px minmax(720px,1fr) 340px; }
+.rtc-video-hero { position:relative; margin:14px 0 5px; aspect-ratio:16/9; border-radius:14px; }
+.rtc-video-hero .avatar-hero { position:absolute; inset:0; aspect-ratio:auto; border-color:rgba(213,169,83,.55); border-radius:14px; box-shadow:0 0 30px rgba(133,83,190,.13); }
+.rtc-video-hero .user-pip { position:absolute; z-index:5; left:10px; bottom:10px; width:34%; aspect-ratio:4/3; border:1px solid rgba(233,213,169,.65); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.5); }
+.rtc-video-hero .speaking-pulse { position:absolute; left:50%; bottom:7px; width:48px; height:2px; transform:translateX(-50%); background:linear-gradient(90deg,transparent,#55d79a,transparent); box-shadow:0 0 10px #55d79a; animation:speakingGlow 1.2s ease-in-out infinite; }
+@keyframes speakingGlow { 50% { opacity:.35; width:72px; } }
+.cinematic-sky .scene-copy { margin-bottom:8px; }
+.celestial-dome { height:500px; position:relative; overflow:hidden; border:1px solid rgba(102,72,137,.5); border-radius:18px; background:radial-gradient(circle at 48% 46%,rgba(52,33,76,.34),transparent 25%),radial-gradient(circle at 31% 55%,rgba(73,41,115,.25),transparent 25%),linear-gradient(180deg,#070611,#05040c); box-shadow:inset 0 0 100px rgba(32,14,52,.5),0 20px 70px rgba(0,0,0,.22); }
+.nebula { position:absolute; border-radius:50%; filter:blur(32px); opacity:.32; transform:rotate(-18deg); }.nebula-a{width:55%;height:22%;left:13%;top:42%;background:radial-gradient(ellipse,rgba(119,70,180,.55),rgba(50,112,166,.18),transparent 68%)}.nebula-b{width:32%;height:18%;right:8%;top:26%;background:radial-gradient(ellipse,rgba(190,101,95,.28),transparent 70%)}
+.sky-star { position:absolute; z-index:1; display:block; border-radius:50%; background:#eee8ff; opacity:.45; box-shadow:0 0 6px rgba(192,177,255,.8); animation:twinkle 3.5s ease-in-out infinite alternate; } @keyframes twinkle{to{opacity:.95;transform:scale(1.35)}}
+.zodiac-ring { position:absolute; z-index:2; width:430px;height:430px;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid rgba(126,87,164,.26);border-radius:50%;box-shadow:0 0 0 28px rgba(72,42,96,.025),0 0 0 60px rgba(72,42,96,.02)}
+.zodiac-ring span { position:absolute; left:calc(50% - 35px); top:calc(50% - 9px); width:70px;text-align:center;color:rgba(166,128,194,.43);font-family:Georgia,serif;font-size:9px;letter-spacing:.4px; }
+.constellation-lines { position:absolute;inset:9%;z-index:1;border-radius:50%;opacity:.32;background-image:linear-gradient(27deg,transparent 48%,rgba(124,85,170,.2) 49%,transparent 50%),linear-gradient(151deg,transparent 48%,rgba(196,137,105,.12) 49%,transparent 50%); }
+.celestial-planet { position:absolute;z-index:4;transform:translate(-50%,-50%);border:0;background:transparent;color:#d7c9df;display:grid;justify-items:center;gap:2px;transition:.35s ease; }.celestial-planet b{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;font-size:19px;background:radial-gradient(circle at 35% 30%,#d6b06c,#563759 58%,#17101e);box-shadow:0 0 16px rgba(189,145,93,.24)}.celestial-planet span{font-size:10px;text-shadow:0 2px 7px #000}.celestial-planet:hover,.celestial-planet.active{transform:translate(-50%,-50%) scale(1.14);color:#fff0bd}.celestial-planet.active b{box-shadow:0 0 0 1px rgba(239,207,118,.85),0 0 18px rgba(218,173,79,.75),0 0 42px rgba(132,78,195,.55);animation:planetFocus 1.8s ease-in-out infinite alternate}@keyframes planetFocus{to{box-shadow:0 0 0 7px rgba(239,207,118,.06),0 0 26px rgba(218,173,79,.85),0 0 55px rgba(132,78,195,.65)}}
+.planet-insight { position:absolute;z-index:7;right:24px;top:36%;width:235px;padding:15px;border:1px solid rgba(106,180,111,.48);border-radius:13px;background:rgba(11,8,19,.88);backdrop-filter:blur(12px);box-shadow:0 14px 45px rgba(0,0,0,.28)}.planet-insight small{color:#a78bfa;font-size:8px;font-weight:800;letter-spacing:1.2px}.planet-insight h3{margin:4px 0;color:#c8f0a2;font-size:19px}.planet-insight .placement{color:#c9bdd3;font-size:10px}.planet-insight p{margin:8px 0 0;color:#968aa3;font-size:10px;line-height:1.5}
+.focus-pill { position:absolute;z-index:7;left:50%;bottom:18px;transform:translateX(-50%);padding:7px 14px;border:1px solid rgba(203,164,74,.55);border-radius:999px;background:rgba(8,6,14,.82);color:#d8c6df;font-size:10px;backdrop-filter:blur(8px)}.focus-pill strong{color:#8ee6a8}.cinematic-strip .planet-card{text-align:center;justify-items:center;min-width:112px}.planet-glyph{width:34px;height:34px!important;display:grid!important;place-items:center;border-radius:50%;font-size:18px!important;color:#ead28f!important;background:radial-gradient(circle,#5c3c64,#17101e 68%);box-shadow:0 0 15px rgba(142,93,179,.16)}.cinematic-strip .planet-card.active .planet-glyph{color:#d9ffb1!important;box-shadow:0 0 0 1px #82c76f,0 0 22px rgba(107,212,116,.42)}
+@media (max-width:1280px){.app-main{grid-template-columns:150px 1fr 300px}.celestial-dome{height:450px}.planet-insight{width:205px}}
+
+
+/* 2026-08-22 stacked equal-size video layout + viewport-fit scenes */
+html, body, #root { height: 100%; overflow: hidden; }
+.app-shell { height: 100vh; overflow: hidden; }
+.app-main { height: calc(100vh - 72px); overflow: hidden; align-items: stretch; }
+.stage { overflow: hidden; height: 100%; min-height: 0; }
+.scene-wrap { height: 100%; min-height: 0; overflow: hidden; padding: 8px 4px 10px; }
+
+/* Agent and user are now equal-size, stacked video surfaces. */
+.rtc-video-hero { display: none; }
+.rtc-video-stack { display: grid; grid-template-rows: 1fr 1fr; gap: 8px; margin: 10px 0 8px; flex: 0 0 auto; }
+.rtc-video-stack .stacked-video { width: 100%; height: clamp(112px, 13.5vh, 145px); aspect-ratio: auto; border-radius: 12px; position: relative; }
+.rtc-video-stack .avatar-video { border-color: rgba(213,169,83,.62); box-shadow: 0 0 24px rgba(173,122,50,.12); }
+.rtc-video-stack .user-video { border-color: rgba(139,92,246,.45); box-shadow: 0 0 20px rgba(112,78,160,.1); }
+.rtc-video-stack .speaking-pulse { position: absolute; left: 50%; bottom: 7px; width: 52px; height: 2px; transform: translateX(-50%); background: linear-gradient(90deg,transparent,#55d79a,transparent); box-shadow: 0 0 10px #55d79a; animation: speakingGlow 1.2s ease-in-out infinite; }
+
+/* Keep the full guide chrome visible without page scrolling. Transcript remains the only bounded history surface. */
+.guide-panel { height: 100%; padding: 14px; }
+.guide-head { flex: 0 0 auto; }
+.guide-prompt { padding: 9px 0; margin: 0; font-size: 11px; line-height: 1.4; }
+.channel-chip { margin: 7px 0; padding: 5px 8px; }
+.transcript-stack { min-height: 82px; gap: 6px; }
+.transcript-line { padding: 7px 8px; font-size: 9.5px; line-height: 1.35; }
+.session-action-row { margin-top: 7px; }
+.media-controls { margin-top: 7px; }
+.media-controls button { height: 34px; }
+
+/* Cosmic Thread is compressed into the viewport rather than requiring stage scrolling. */
+.thread-scene { display: grid; grid-template-rows: auto minmax(112px, 17vh) minmax(190px, 1fr) auto; gap: 8px; }
+.thread-scene .scene-copy { margin: 0 auto 2px; }
+.thread-scene .scene-copy h2 { font-size: clamp(24px, 2vw, 31px); }
+.thread-scene .scene-copy p { margin-top: 4px; font-size: 11px; line-height: 1.4; }
+.thread-scene .timeline { height: auto; min-height: 112px; margin-top: 0; padding: 18px 22px; }
+.thread-scene .timeline-line { top: 52%; }
+.thread-scene .timeline-node { top: calc(52% - 27px); }
+.thread-scene .branch-grid { margin-top: 0; gap: 8px; min-height: 0; }
+.thread-scene .branch-card { min-height: 0; padding: 12px; display: flex; flex-direction: column; }
+.thread-scene .branch-card h3 { margin: 5px 0; font-size: 17px; }
+.thread-scene .branch-card p { min-height: 0; margin: 7px 0; font-size: 10px; flex: 1; }
+.thread-scene .branch-card .ghost-btn { padding: 7px 9px; font-size: 10px; }
+
+/* Other scenes also avoid page-level scrolling while preserving their internal visual layouts. */
+.cinematic-sky .celestial-dome { height: clamp(350px, 54vh, 500px); }
+.kundli-layout, .palm-layout { margin-top: 10px; height: calc(100% - 95px); min-height: 0; }
+.kundli-board, .camera-stage { min-height: 0; height: 100%; }
+.chart-summary, .palm-result { overflow: hidden; }
+
+@media (max-height: 850px) {
+  .topbar { height: 62px; }
+  .app-main { height: calc(100vh - 62px); padding: 10px; gap: 10px; }
+  .journey-rail { padding-top: 12px; }
+  .rtc-video-stack .stacked-video { height: 108px; }
+  .avatar-orb { width: 48px; height: 48px; }
+  .guide-head .eyebrow { margin-bottom: 6px; }
+  .guide-prompt { font-size: 10px; }
+  .thread-scene { grid-template-rows: auto 105px minmax(165px,1fr) auto; }
+  .thread-scene .branch-card { padding: 9px; }
+  .thread-scene .branch-card p { margin: 4px 0; }
+}
+
+/* 2026-08-24 equal large agent + user video tiles */
+.rtc-video-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto;
+  gap: 10px;
+  margin: 10px 0 8px;
+  flex: 0 0 auto;
+}
+.rtc-video-stack .stacked-video {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+  border-radius: 13px;
+  position: relative;
+}
+.rtc-video-stack .avatar-video,
+.rtc-video-stack .user-video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+.rtc-video-stack .rtc-video-surface,
+.rtc-video-stack .rtc-video-surface > div,
+.rtc-video-stack .rtc-video-surface video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+/* Reclaim vertical space from chrome so both large 16:9 videos remain visible. */
+.guide-head { gap: 10px; }
+.guide-panel .avatar-orb { width: 50px; height: 50px; font-size: 24px; }
+.guide-panel .eyebrow { margin-bottom: 6px; }
+.guide-panel .guide-prompt { padding: 7px 0; }
+.guide-panel .channel-chip { margin: 5px 0; }
+.guide-panel .transcript-stack { min-height: 64px; }
+.guide-panel .session-action-row { margin-top: 5px; }
+.guide-panel .media-controls { margin-top: 5px; }
+
+@media (max-height: 900px) {
+  .rtc-video-stack { gap: 7px; margin: 7px 0 6px; }
+  .rtc-video-stack .stacked-video { aspect-ratio: 16 / 8.4; }
+  .guide-panel { padding: 11px; }
+  .guide-panel .avatar-orb { width: 44px; height: 44px; font-size: 21px; }
+  .guide-panel .guide-prompt { padding: 5px 0; font-size: 9.5px; }
+  .guide-panel .transcript-stack { min-height: 54px; }
+}
+
+/* 2026-08-24: cinematic Birth Sky ambient motion */
+.celestial-dome::after{content:"";position:absolute;inset:-20%;z-index:0;pointer-events:none;background:conic-gradient(from 20deg at 52% 48%,transparent 0 14%,rgba(112,76,157,.055) 20%,transparent 27% 52%,rgba(224,183,92,.035) 60%,transparent 68%);animation:cosmicBreath 16s ease-in-out infinite alternate;mix-blend-mode:screen}
+@keyframes cosmicBreath{0%{opacity:.45;transform:scale(1) rotate(-1deg)}100%{opacity:.9;transform:scale(1.06) rotate(1deg)}}
+.star-depth{position:absolute;inset:0;z-index:1;pointer-events:none;will-change:transform}.star-depth-far{animation:starParallaxFar 28s ease-in-out infinite alternate}.star-depth-near{animation:starParallaxNear 20s ease-in-out infinite alternate}
+@keyframes starParallaxFar{from{transform:translate3d(-5px,-2px,0) scale(1.01)}to{transform:translate3d(7px,4px,0) scale(1.025)}}
+@keyframes starParallaxNear{from{transform:translate3d(6px,3px,0) scale(1.015)}to{transform:translate3d(-8px,-5px,0) scale(1.035)}}
+.sky-star.drift-1{animation-duration:3.2s}.sky-star.drift-2{animation-duration:4.1s}.sky-star.drift-3{animation-duration:5.3s}.sky-star.drift-4{animation-duration:6.1s}.sky-star.drift-5{animation-duration:7.2s}
+.celestial-stage{position:absolute;inset:0;z-index:3;transform-origin:center;transition:transform .9s cubic-bezier(.2,.75,.2,1);will-change:transform}
+.zodiac-ring{animation:zodiacDrift 70s linear infinite}.zodiac-ring span{animation:zodiacLabelCounter 70s linear infinite reverse;transform-origin:center}
+@keyframes zodiacDrift{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes zodiacLabelCounter{to{filter:brightness(1.08)}}
+.focus-trajectory{position:absolute;inset:0;width:100%;height:100%;z-index:3;overflow:visible;pointer-events:none}.focus-trajectory path{fill:none;stroke:rgba(231,194,105,.68);stroke-width:.18;stroke-linecap:round;stroke-dasharray:2 2;filter:drop-shadow(0 0 3px rgba(210,166,78,.9));animation:trajectoryFlow 1.15s linear infinite}
+@keyframes trajectoryFlow{to{stroke-dashoffset:-8}}
+.focus-beacon{position:absolute;z-index:3;width:96px;height:96px;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;background:radial-gradient(circle,rgba(235,202,117,.11),rgba(143,92,198,.08) 38%,transparent 70%);box-shadow:0 0 38px rgba(197,147,74,.2);animation:beaconPulse 2.2s ease-in-out infinite}
+@keyframes beaconPulse{50%{transform:translate(-50%,-50%) scale(1.18);opacity:.58}}
+.celestial-planet{will-change:transform,filter}.celestial-planet:not(.active){opacity:.8;filter:saturate(.78) brightness(.86)}.celestial-planet.active{z-index:8;opacity:1;filter:saturate(1.22) brightness(1.16)}
+.celestial-planet.ambient-1:not(.active){animation:planetAmbient1 8s ease-in-out infinite alternate}.celestial-planet.ambient-2:not(.active){animation:planetAmbient2 9.5s ease-in-out infinite alternate}.celestial-planet.ambient-3:not(.active){animation:planetAmbient3 10.5s ease-in-out infinite alternate}.celestial-planet.ambient-4:not(.active){animation:planetAmbient4 11.5s ease-in-out infinite alternate}
+@keyframes planetAmbient1{to{margin-left:4px;margin-top:-3px}}@keyframes planetAmbient2{to{margin-left:-4px;margin-top:3px}}@keyframes planetAmbient3{to{margin-left:2px;margin-top:5px}}@keyframes planetAmbient4{to{margin-left:-3px;margin-top:-4px}}
+.celestial-dome.is-transitioning .focus-trajectory path{animation:trajectoryReveal .9s ease-out both}.celestial-dome.is-transitioning .celestial-stage{filter:brightness(.92)}.celestial-dome.is-transitioning .celestial-planet.active{animation:planetArrival .9s cubic-bezier(.18,.78,.25,1) both}
+@keyframes trajectoryReveal{from{stroke-dasharray:0 100;opacity:0}to{stroke-dasharray:100 0;opacity:1}}@keyframes planetArrival{0%{transform:translate(-50%,-50%) scale(.68);opacity:.25;filter:blur(2px)}55%{transform:translate(-50%,-50%) scale(1.28);opacity:1;filter:blur(0)}100%{transform:translate(-50%,-50%) scale(1.14)}}
+.planet-insight{animation:insightReveal .55s ease both}@keyframes insightReveal{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
+.nebula-a{animation:nebulaFloatA 18s ease-in-out infinite alternate}.nebula-b{animation:nebulaFloatB 23s ease-in-out infinite alternate}@keyframes nebulaFloatA{to{transform:translate(18px,-10px) scale(1.07);opacity:.8}}@keyframes nebulaFloatB{to{transform:translate(-14px,12px) scale(1.05);opacity:.72}}
+@media (prefers-reduced-motion:reduce){.celestial-dome::after,.star-depth,.zodiac-ring,.focus-trajectory path,.focus-beacon,.celestial-planet,.nebula-a,.nebula-b{animation:none!important}.celestial-stage{transition:none!important}}
+
+/* Dynamic Kundli guidance: replaces the static snapshot when remedies enter the conversation. */
+.jyotishi-guidance { padding: 18px; min-height: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+.guidance-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.guidance-head h3 { margin: 5px 0 0; font-size: 20px; color: #f4e5bc; }
+.guidance-planet { min-width: 58px; text-align: center; padding: 8px 10px; border: 1px solid rgba(243,212,139,.45); border-radius: 999px; color: #f3d48b; background: rgba(243,212,139,.08); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.guidance-subtitle { color: #93869f; font-size: 11px; line-height: 1.45; margin: 10px 0 12px; }
+.guidance-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-height: 0; }
+.guidance-card { border: 1px solid #34283f; border-radius: 12px; padding: 10px; background: linear-gradient(145deg, rgba(23,16,32,.94), rgba(13,10,24,.96)); display: grid; grid-template-columns: 32px 1fr; gap: 9px; align-items: start; transition: transform .3s ease, border-color .3s ease, box-shadow .3s ease; }
+.guidance-card.active { border-color: rgba(243,212,139,.72); box-shadow: 0 0 22px rgba(243,212,139,.12); transform: translateY(-2px); }
+.guidance-card-icon { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: rgba(128,103,164,.14); font-size: 16px; }
+.guidance-card-copy { display: flex; flex-direction: column; min-width: 0; }
+.guidance-card-copy span { color: #9e83d8; font-size: 8px; font-weight: 800; letter-spacing: .11em; }
+.guidance-card-copy strong { color: #ead59c; font-size: 12px; margin-top: 3px; }
+.guidance-card-copy small { color: #8f8399; font-size: 9px; line-height: 1.35; margin-top: 4px; }
+.guidance-disclaimer { margin-top: auto; padding-top: 9px; color: #6f6578; font-size: 8px; line-height: 1.35; }
+@media (max-width: 1180px) { .guidance-cards { grid-template-columns: 1fr; } .guidance-card-copy small { display: none; } }
+
+/* Dosha assessment gate: never show remedy cards for a negative assessment. */
+.guidance-assessment { margin-top: 6px; border: 1px solid #392c46; border-radius: 14px; padding: 16px; display: grid; grid-template-columns: 42px 1fr; gap: 12px; align-items: start; background: linear-gradient(145deg, rgba(26,18,36,.96), rgba(14,10,24,.98)); }
+.guidance-assessment-clear { border-color: rgba(92,211,156,.42); box-shadow: 0 0 22px rgba(92,211,156,.08); }
+.assessment-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(128,103,164,.16); color: #ead59c; font-size: 18px; font-weight: 800; }
+.guidance-assessment-clear .assessment-icon { background: rgba(92,211,156,.12); color: #79e1b0; }
+.guidance-assessment span { display:block; color:#9e83d8; font-size:8px; font-weight:800; letter-spacing:.12em; }
+.guidance-assessment strong { display:block; color:#f0dfae; font-size:16px; margin-top:4px; }
+.guidance-assessment p { margin:7px 0 0; color:#93869f; font-size:10px; line-height:1.5; }
+
+/* Visual remedy experience inside Kundli guidance. */
+.kundli-layout.with-guidance-experience { grid-template-columns: .9fr 1.1fr; }
+.kundli-layout.with-guidance-experience .kundli-board { min-width: 0; }
+.kundli-layout.with-guidance-experience .jyotishi-guidance { overflow: hidden; }
+.guidance-experience { display: grid; grid-template-columns: 68px minmax(180px,.95fr) minmax(180px,1.05fr); gap: 10px; min-height: 0; align-items: stretch; }
+.guidance-kind-rail { display: grid; grid-template-rows: repeat(4, 1fr); gap: 7px; min-height: 0; }
+.guidance-kind-tab { min-height: 0; border: 1px solid #352742; border-radius: 11px; background: linear-gradient(145deg,rgba(22,15,31,.98),rgba(13,9,23,.98)); color: #b9aac7; cursor: pointer; display: grid; place-items: center; align-content: center; gap: 3px; transition: .28s ease; padding: 6px 4px; }
+.guidance-kind-tab span { font-size: 18px; line-height: 1; }
+.guidance-kind-tab small { font-size: 7px; letter-spacing: .08em; font-weight: 800; color: #a48cb8; }
+.guidance-kind-tab.active { border-color: rgba(243,212,139,.72); background: linear-gradient(150deg,rgba(56,39,58,.96),rgba(22,15,31,.98)); box-shadow: 0 0 22px rgba(243,212,139,.1); transform: translateX(2px); }
+.guidance-kind-tab.active small { color: #f1d89d; }
+.remedy-visual { position: relative; overflow: hidden; min-height: 255px; border: 1px solid rgba(184,133,75,.62); border-radius: 14px; background: radial-gradient(circle at 50% 40%,rgba(92,56,119,.26),rgba(9,7,17,.98) 72%); box-shadow: inset 0 0 45px rgba(91,49,118,.14), 0 14px 34px rgba(0,0,0,.22); }
+.visual-caption { position: absolute; left: 12px; right: 12px; bottom: 10px; border: 1px solid rgba(89,67,103,.52); border-radius: 9px; background: rgba(8,6,14,.72); backdrop-filter: blur(8px); padding: 7px 9px; z-index: 10; }
+.visual-caption span { display: block; color: #a88bd8; font-size: 7px; font-weight: 800; letter-spacing: .12em; }
+.visual-caption strong { display: block; color: #f2d993; font-size: 12px; margin-top: 2px; }
+.remedy-visual-puja { background: linear-gradient(180deg,#111428 0%,#171027 42%,#07050d 100%); }
+.remedy-visual-puja::before { content:""; position:absolute; inset:0; background: radial-gradient(circle at 50% 14%,rgba(119,78,164,.30),transparent 30%), linear-gradient(180deg,transparent 50%,rgba(210,145,67,.08)); }
+.temple-moon { position:absolute; width:44px; height:44px; border-radius:50%; right:18px; top:18px; background:radial-gradient(circle at 35% 30%,#ffe5a5,#9e7a3f 68%,#4b3923); box-shadow:0 0 28px rgba(236,199,124,.34); opacity:.82; }
+.temple-stars { position:absolute; inset:0; background-image:radial-gradient(circle,#fff 0 1px,transparent 1.6px); background-size:42px 39px; opacity:.18; animation:templeStarDrift 18s linear infinite; }
+.temple-silhouette { position:absolute; left:50%; bottom:55px; width:126px; height:125px; transform:translateX(-50%); background:linear-gradient(180deg,#5c3a31,#1a1115 84%); clip-path:polygon(50% 0,58% 13%,66% 13%,66% 20%,75% 20%,75% 28%,84% 28%,84% 100%,16% 100%,16% 28%,25% 28%,25% 20%,34% 20%,34% 13%,42% 13%); box-shadow:0 0 30px rgba(207,120,64,.16); }
+.temple-silhouette::before { content:""; position:absolute; left:48px; bottom:0; width:30px; height:48px; border-radius:18px 18px 0 0; background:radial-gradient(circle at 50% 32%,#f3b35f,#744020 56%,#0e0a0d 58%); box-shadow:0 0 22px rgba(240,160,70,.46); }
+.temple-silhouette i { position:absolute; bottom:12px; width:12px; height:24px; border-radius:8px 8px 0 0; background:#0d090c; }
+.temple-silhouette i:nth-child(1){left:22px}.temple-silhouette i:nth-child(2){left:57px;opacity:0}.temple-silhouette i:nth-child(3){right:22px}
+.temple-steps { position:absolute; left:50%; bottom:44px; width:150px; height:26px; transform:translateX(-50%); background:repeating-linear-gradient(180deg,#5a3428 0 4px,#25151a 4px 8px); clip-path:polygon(14% 0,86% 0,100% 100%,0 100%); }
+.diya { position:absolute; bottom:43px; color:#f5c66c; text-shadow:0 0 10px #f5a742,0 0 20px #d16f31; animation:diyaFlicker 1.3s ease-in-out infinite alternate; z-index:5; }.diya-a{left:20%}.diya-b{left:48%;animation-delay:.25s}.diya-c{right:18%;animation-delay:.5s}
+@keyframes diyaFlicker{to{transform:scale(1.28);opacity:.64}}@keyframes templeStarDrift{to{transform:translateY(18px)}}
+.remedy-visual-gemstone { display:grid; place-items:center; background:radial-gradient(circle at 50% 44%,rgba(45,87,182,.34),rgba(27,14,45,.84) 42%,rgba(7,5,13,.99) 75%); }
+.gemstone-model { position:relative; z-index:5; font-size:100px; color:#499bff; text-shadow:0 0 10px #92c4ff,0 0 34px rgba(37,100,255,.72), 12px -10px 0 rgba(149,196,255,.12); animation:gemSpin 6s ease-in-out infinite alternate; transform-style:preserve-3d; filter:drop-shadow(0 18px 18px rgba(0,0,0,.45)); }
+.gemstone-mars .gemstone-model { color:#dd5d47; text-shadow:0 0 10px #ffb08d,0 0 34px rgba(220,75,50,.72); }.gemstone-saturn .gemstone-model { color:#4185ff; }.gemstone-rahu .gemstone-model { color:#c9854c; }.gemstone-ketu .gemstone-model { color:#85c9b5; }
+.gem-orbit { position:absolute; border:1px solid rgba(125,103,194,.34); border-radius:50%; inset:22%; animation:gemOrbit 10s linear infinite; }.orbit-two{inset:31%;animation-direction:reverse;animation-duration:7s}.gem-shine{position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;filter:blur(3px);opacity:.75;top:31%;left:54%;animation:gemShine 2.6s ease-in-out infinite}
+@keyframes gemSpin{from{transform:rotateY(-16deg) rotateZ(-2deg) scale(.92)}to{transform:rotateY(18deg) rotateZ(3deg) scale(1.04)}}@keyframes gemOrbit{to{transform:rotate(360deg)}}@keyframes gemShine{50%{opacity:.2;transform:translate(18px,18px) scale(.65)}}
+.remedy-visual-mantra { display:grid; place-items:center; background:radial-gradient(circle at 50% 44%,rgba(126,77,169,.35),rgba(11,7,20,.98) 68%); }
+.mantra-om { position:relative; z-index:4; font-size:92px; color:#ead6ff; text-shadow:0 0 18px rgba(166,116,223,.84); animation:omPulse 2.8s ease-in-out infinite; }.mantra-ring{position:absolute;left:50%;top:42%;border:1px solid rgba(190,143,238,.36);border-radius:50%;transform:translate(-50%,-50%);animation:mantraRing 3.1s ease-out infinite}.ring-a{width:110px;height:110px}.ring-b{width:160px;height:160px;animation-delay:1.2s}.mantra-wave{position:absolute;left:10%;right:10%;bottom:62px;height:30px;display:flex;gap:4px;align-items:center;justify-content:center}.mantra-wave i{width:3px;height:8px;border-radius:3px;background:#b785f0;animation:mantraWave .9s ease-in-out infinite alternate}
+@keyframes omPulse{50%{transform:scale(1.08);filter:brightness(1.25)}}@keyframes mantraRing{0%{transform:translate(-50%,-50%) scale(.72);opacity:.8}100%{transform:translate(-50%,-50%) scale(1.28);opacity:0}}@keyframes mantraWave{to{height:26px;opacity:.46}}
+.remedy-visual-practice { display:grid;place-items:center;background:radial-gradient(circle at 50% 48%,rgba(204,120,58,.22),rgba(26,12,25,.72) 44%,rgba(8,6,13,.98) 75%)}.practice-diya{position:relative;z-index:4;font-size:76px;filter:drop-shadow(0 0 18px rgba(242,171,71,.65));animation:practiceFloat 2.7s ease-in-out infinite}.practice-halo{position:absolute;width:145px;height:145px;border-radius:50%;background:radial-gradient(circle,rgba(239,173,76,.18),transparent 68%);animation:practiceHalo 2.7s ease-in-out infinite}.practice-day{position:absolute;top:16px;left:16px;border:1px solid rgba(243,212,139,.38);border-radius:999px;padding:5px 8px;color:#eed290;font-size:8px;font-weight:800;letter-spacing:.12em}
+@keyframes practiceFloat{50%{transform:translateY(-7px)}}@keyframes practiceHalo{50%{transform:scale(1.14);opacity:.5}}
+.guidance-detail { min-width:0; display:flex; flex-direction:column; padding:4px 0 0; }
+.guidance-detail-label { color:#9e83d8;font-size:8px;font-weight:800;letter-spacing:.12em; }.guidance-detail h4{margin:5px 0 5px;color:#f2d993;font-size:17px}.guidance-detail>p{margin:0;color:#9c8ea5;font-size:9px;line-height:1.45}.guidance-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}.guidance-detail-grid>div{border:1px solid #32263d;border-radius:8px;padding:7px;background:rgba(11,8,18,.58)}.guidance-detail-grid span{display:block;color:#846da7;font-size:6px;font-weight:800;letter-spacing:.09em}.guidance-detail-grid strong{display:block;color:#d8c8df;font-size:8px;line-height:1.3;margin-top:3px}.future-commerce-btn{margin-top:auto;border:1px solid rgba(142,91,210,.6);background:linear-gradient(90deg,rgba(89,54,138,.78),rgba(105,62,159,.62));color:#d9c8ed;border-radius:9px;padding:8px 10px;font-size:9px;font-weight:700;opacity:.72}.future-commerce-btn:disabled{cursor:not-allowed}
+.guidance-overview { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:9px; }
+.guidance-overview-card { min-width:0; border:1px solid #30243b; border-radius:10px; background:linear-gradient(145deg,rgba(20,14,29,.96),rgba(11,8,18,.98)); padding:7px; color:inherit; text-align:left; cursor:pointer; display:grid; grid-template-columns:34px 1fr; gap:7px; transition:.25s ease; }
+.guidance-overview-card.active { border-color:rgba(243,212,139,.65); box-shadow:0 0 16px rgba(243,212,139,.08); transform:translateY(-1px); }.guidance-overview-visual{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,rgba(126,85,159,.3),rgba(27,17,37,.98));font-size:16px}.overview-gemstone{animation:overviewGem 4s ease-in-out infinite alternate}.overview-mantra{animation:overviewPulse 2.6s ease-in-out infinite}.overview-puja{box-shadow:inset 0 -8px 12px rgba(220,121,59,.08)}.overview-practice{box-shadow:inset 0 0 12px rgba(214,143,55,.08)}
+.guidance-overview-card span{display:block;color:#8f72bc;font-size:6px;font-weight:800;letter-spacing:.08em}.guidance-overview-card strong{display:block;color:#e7d39b;font-size:8px;margin-top:2px}.guidance-overview-card small{display:block;color:#786d80;font-size:6px;line-height:1.28;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@keyframes overviewGem{to{transform:rotate(10deg) scale(1.05)}}@keyframes overviewPulse{50%{filter:brightness(1.4)}}
+@media(max-width:1280px){.guidance-experience{grid-template-columns:56px 1fr}.guidance-detail{grid-column:1/-1}.guidance-detail-grid{grid-template-columns:repeat(4,1fr)}.guidance-detail>p{display:none}.future-commerce-btn{margin-top:7px}.guidance-overview{display:none}}
+@media(max-width:1080px){.kundli-layout.with-guidance-experience{grid-template-columns:1fr}.kundli-layout.with-guidance-experience .kundli-board{display:none}.guidance-experience{grid-template-columns:56px 1fr 1fr}.guidance-detail{grid-column:auto}.guidance-detail-grid{grid-template-columns:1fr 1fr}}
+@media(prefers-reduced-motion:reduce){.temple-stars,.diya,.gemstone-model,.gem-orbit,.gem-shine,.mantra-om,.mantra-ring,.mantra-wave i,.practice-diya,.practice-halo,.overview-gemstone,.overview-mantra{animation:none!important}}
+
+/* 2026-08-24: gemstone visualization now follows the gemstone Jyotishi actually names. */
+.gemstone-model{position:relative;width:112px;height:112px;display:block;transform-style:preserve-3d;animation:gemSpin 7s linear infinite;filter:drop-shadow(0 0 22px var(--gem-glow,rgba(104,158,255,.55)))}
+.gemstone-model .gem-core{position:absolute;inset:17px;clip-path:polygon(50% 0,88% 22%,100% 62%,72% 100%,28% 100%,0 62%,12% 22%);background:linear-gradient(145deg,var(--gem-hi,#8bc4ff),var(--gem-mid,#3f86e8) 48%,var(--gem-low,#173f9e));box-shadow:inset 12px 8px 18px rgba(255,255,255,.24),inset -14px -14px 20px rgba(0,0,0,.28)}
+.gemstone-model .gem-facet{position:absolute;z-index:2;pointer-events:none;opacity:.55;mix-blend-mode:screen}
+.gem-facet-a{inset:29px 26px 52px 26px;clip-path:polygon(50% 0,100% 100%,0 100%);background:rgba(255,255,255,.5)}
+.gem-facet-b{inset:47px 52px 22px 22px;clip-path:polygon(0 0,100% 24%,58% 100%);background:rgba(255,255,255,.18)}
+.gem-facet-c{inset:45px 21px 24px 56px;clip-path:polygon(0 20%,100% 0,42% 100%);background:rgba(255,255,255,.12)}
+.remedy-visual-gemstone.gem-yellow-sapphire{--gem-hi:#fff6ad;--gem-mid:#f1c84b;--gem-low:#b87808;--gem-glow:rgba(255,208,76,.72)}
+.remedy-visual-gemstone.gem-blue-sapphire{--gem-hi:#a5ceff;--gem-mid:#3f7ee8;--gem-low:#172e91;--gem-glow:rgba(77,137,255,.68)}
+.remedy-visual-gemstone.gem-red-coral{--gem-hi:#ffb098;--gem-mid:#e44d38;--gem-low:#7e1e19;--gem-glow:rgba(239,78,58,.65)}
+.remedy-visual-gemstone.gem-emerald{--gem-hi:#abf6d4;--gem-mid:#2eae75;--gem-low:#0b5b3b;--gem-glow:rgba(65,207,140,.62)}
+.remedy-visual-gemstone.gem-ruby{--gem-hi:#ff9aad;--gem-mid:#dc3155;--gem-low:#7b1029;--gem-glow:rgba(233,48,89,.67)}
+.remedy-visual-gemstone.gem-pearl{--gem-hi:#ffffff;--gem-mid:#ece6db;--gem-low:#aaa7b2;--gem-glow:rgba(255,248,230,.55)}
+.remedy-visual-gemstone.gem-diamond{--gem-hi:#ffffff;--gem-mid:#bfeaff;--gem-low:#779fba;--gem-glow:rgba(205,244,255,.7)}
+.remedy-visual-gemstone.gem-hessonite{--gem-hi:#ffd08d;--gem-mid:#b66a28;--gem-low:#673217;--gem-glow:rgba(205,117,43,.62)}
+.remedy-visual-gemstone.gem-catseye{--gem-hi:#e6dfa2;--gem-mid:#8d8b4d;--gem-low:#4c4b28;--gem-glow:rgba(203,198,111,.6)}
+@keyframes gemSpin{0%{transform:rotateY(0deg) rotateZ(-2deg) scale(.96)}50%{transform:rotateY(180deg) rotateZ(2deg) scale(1.03)}100%{transform:rotateY(360deg) rotateZ(-2deg) scale(.96)}}
+
+/* 2026-08-25 Kundli premium layout alignment with approved draft */
+.kundli-scene .scene-copy { position: relative; z-index: 2; }
+.kundli-profile-chips { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:7px; margin-top:8px; }
+.kundli-profile-chips span { border:1px solid #342741; background:rgba(14,10,24,.72); color:#b6a7c3; border-radius:999px; padding:5px 9px; font-size:8.5px; line-height:1; }
+.kundli-profile-chips .kundli-context-chip { color:#d9bd75; border-color:rgba(217,189,117,.28); }
+.kundli-board { display:flex; flex-direction:column; padding:12px 14px 10px; }
+.kundli-board svg { flex:1 1 auto; min-height:0; width:100%; }
+.kundli-planet-active circle { filter:drop-shadow(0 0 8px rgba(243,212,139,.32)); }
+.kundli-element-legend { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; padding:7px 5px 0; border-top:1px solid rgba(69,51,82,.45); }
+.kundli-element-legend span { display:flex; align-items:center; gap:4px; color:#95889f; font-size:7.5px; }
+.kundli-element-legend i { font-style:normal; color:#d6c9e0; }
+.kundli-glance { margin-top:8px; padding:9px 11px 10px; flex:0 0 auto; }
+.kundli-glance-title { color:#a98ad8; font-size:8px; font-weight:800; letter-spacing:.14em; margin-bottom:7px; }
+.kundli-glance-grid { display:grid; grid-template-columns:repeat(9,minmax(0,1fr)); gap:6px; }
+.kundli-glance-card { min-width:0; border:1px solid #2f2439; border-radius:10px; background:linear-gradient(160deg,rgba(22,15,31,.92),rgba(10,8,18,.98)); padding:7px 4px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; line-height:1.15; }
+.kundli-glance-card.active { border-color:rgba(243,212,139,.62); box-shadow:0 0 16px rgba(243,212,139,.09); }
+.kundli-glance-glyph { font-size:18px; line-height:1; color:#e7c86f; text-shadow:0 0 10px rgba(231,200,111,.25); }
+.kundli-glance-card strong { color:#ead8a4; font-size:8.5px; margin-top:3px; }
+.kundli-glance-card small { color:#887b92; font-size:6.6px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.kundli-next { display:none; }
+
+/* White/clear sapphire and generic sapphire now render as luminous faceted stones instead of blue placeholders. */
+.remedy-visual-gemstone.gem-white-sapphire{--gem-hi:#ffffff;--gem-mid:#e9edf4;--gem-low:#aeb7c8;--gem-glow:rgba(248,248,255,.72);background:radial-gradient(circle at 50% 44%,rgba(218,214,255,.18),rgba(30,18,43,.78) 42%,rgba(7,5,13,.99) 75%)}
+.remedy-visual-gemstone.gem-sapphire{--gem-hi:#c3d7ff;--gem-mid:#718fc8;--gem-low:#374d7b;--gem-glow:rgba(138,169,225,.62)}
+.remedy-visual-gemstone.gem-diamond .gemstone-model .gem-core,
+.remedy-visual-gemstone.gem-white-sapphire .gemstone-model .gem-core { clip-path:polygon(18% 10%,82% 10%,100% 38%,72% 100%,28% 100%,0 38%); background:linear-gradient(145deg,var(--gem-hi),rgba(255,255,255,.96) 28%,var(--gem-mid) 58%,var(--gem-low)); }
+.remedy-visual-gemstone.gem-red-coral .gemstone-model .gem-core { border-radius:48% 44% 52% 40%; clip-path:none; transform:rotate(-9deg); }
+.remedy-visual-gemstone.gem-pearl .gemstone-model .gem-core { border-radius:50%; clip-path:none; }
+.remedy-visual-gemstone.gem-catseye .gemstone-model .gem-core { border-radius:50% 50% 46% 46%; clip-path:none; }
+
+/* Make user and assistant speech unmistakably different. */
+.transcript-line { display:block; border-radius:11px; position:relative; }
+.transcript-line.user-line { margin-left:22px; background:linear-gradient(145deg,rgba(33,25,47,.96),rgba(19,15,30,.96)); border-color:#3c2f4a; }
+.transcript-line.agent-line { margin-right:12px; background:linear-gradient(145deg,rgba(19,31,29,.94),rgba(13,18,24,.97)); border-color:rgba(83,188,139,.34); }
+.transcript-speaker { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
+.transcript-speaker span { font-size:6.7px; font-weight:900; letter-spacing:.12em; }
+.user-line .transcript-speaker span { color:#b49bdf; }
+.agent-line .transcript-speaker span { color:#73dbad; }
+.transcript-speaker i { font-style:normal; font-size:6px; color:#b8e9d0; border:1px solid rgba(83,188,139,.25); border-radius:999px; padding:1px 4px; }
+.transcript-copy { color:#d6ccd9; font-size:9.5px; line-height:1.38; }
+.agent-line .transcript-copy { color:#dce7e1; }
+
+@media(max-width:1300px){
+  .kundli-glance-grid{gap:4px}.kundli-glance-card{padding:6px 2px}.kundli-glance-glyph{font-size:16px}.kundli-glance-card strong{font-size:7.7px}.kundli-glance-card small{font-size:6px}
+}
+
+/* Keep the approved Kundli composition fully inside the stage viewport. */
+.kundli-scene { display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:7px; }
+.kundli-scene .scene-copy { margin:0 auto; }
+.kundli-scene .kundli-layout { height:auto; margin-top:0; min-height:0; }
+.kundli-scene .kundli-board,
+.kundli-scene .chart-summary,
+.kundli-scene .jyotishi-guidance { min-height:0; height:100%; }
+@media(max-height:850px){
+  .kundli-profile-chips{margin-top:5px}.kundli-profile-chips span{padding:4px 7px;font-size:7.5px}
+  .kundli-glance{padding:6px 8px}.kundli-glance-title{margin-bottom:4px}.kundli-glance-card{padding:4px 2px}.kundli-glance-glyph{font-size:14px}
+}
+
+/* 2026-08-25: Kundli guidance collision + live-sync polish. */
+.kundli-layout.with-guidance-experience .jyotishi-guidance {
+  padding: 14px 16px 10px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0,1fr) auto;
+  align-content: stretch;
+  gap: 5px;
+  overflow: hidden;
+}
+.kundli-layout.with-guidance-experience .guidance-head { margin: 0; }
+.kundli-layout.with-guidance-experience .guidance-subtitle { margin: 0 0 2px; }
+.kundli-layout.with-guidance-experience .guidance-experience {
+  grid-template-columns: 58px minmax(165px,.92fr) minmax(205px,1.08fr);
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+  max-height: 268px;
+}
+.kundli-layout.with-guidance-experience .guidance-kind-rail { gap: 5px; }
+.kundli-layout.with-guidance-experience .guidance-kind-tab { padding: 4px 3px; border-radius: 9px; }
+.kundli-layout.with-guidance-experience .guidance-kind-tab span { font-size: 15px; }
+.kundli-layout.with-guidance-experience .guidance-kind-tab small { font-size: 6px; }
+.kundli-layout.with-guidance-experience .remedy-visual {
+  min-height: 0;
+  height: 100%;
+  max-height: 268px;
+}
+.kundli-layout.with-guidance-experience .guidance-detail { padding-top: 1px; min-height: 0; }
+.kundli-layout.with-guidance-experience .guidance-detail h4 { font-size: 15px; margin: 3px 0 4px; }
+.kundli-layout.with-guidance-experience .guidance-detail > p { font-size: 8px; line-height: 1.35; }
+.kundli-layout.with-guidance-experience .guidance-detail-grid { gap: 5px; margin-top: 7px; }
+.kundli-layout.with-guidance-experience .guidance-detail-grid > div { padding: 5px 6px; }
+.kundli-layout.with-guidance-experience .guidance-detail-grid strong { font-size: 7px; }
+.kundli-layout.with-guidance-experience .future-commerce-btn {
+  margin-top: 7px;
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  position: static;
+}
+.kundli-layout.with-guidance-experience .guidance-overview {
+  margin-top: 6px;
+  gap: 6px;
+  min-height: 0;
+  flex: 0 0 auto;
+}
+.kundli-layout.with-guidance-experience .guidance-overview-card {
+  padding: 5px 6px;
+  grid-template-columns: 29px 1fr;
+  gap: 5px;
+  min-height: 47px;
+}
+.kundli-layout.with-guidance-experience .guidance-overview-visual { width: 29px; height: 29px; font-size: 14px; }
+.kundli-layout.with-guidance-experience .guidance-overview-card strong { font-size: 7px; }
+.kundli-layout.with-guidance-experience .guidance-overview-card small { font-size: 5.5px; -webkit-line-clamp: 1; }
+.kundli-layout.with-guidance-experience .guidance-disclaimer {
+  margin-top: 3px;
+  padding-top: 4px;
+  font-size: 6.5px;
+  line-height: 1.25;
+  flex: 0 0 auto;
+}
+@media (max-height: 820px) {
+  .kundli-layout.with-guidance-experience .guidance-experience { max-height: 235px; }
+  .kundli-layout.with-guidance-experience .remedy-visual { max-height: 235px; }
+  .kundli-layout.with-guidance-experience .guidance-detail > p { display:none; }
+  .kundli-layout.with-guidance-experience .visual-caption { bottom: 7px; padding: 5px 7px; }
+  .kundli-layout.with-guidance-experience .guidance-overview-card { min-height: 42px; }
+}
+
+/* 2026-08-25: real temple reference image for Puja guidance. */
+.remedy-visual-puja { background:#090712; }
+.remedy-visual-puja::before { display:none; }
+.temple-photo {
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  object-position:center 42%; filter:saturate(.82) brightness(.72) contrast(1.08);
+  transform:scale(1.035); animation:templePhotoDrift 12s ease-in-out infinite alternate;
+}
+.temple-photo-overlay {
+  position:absolute; inset:0; z-index:2;
+  background:linear-gradient(180deg,rgba(8,6,18,.05) 0%,rgba(12,7,21,.18) 45%,rgba(6,4,12,.86) 100%),
+             radial-gradient(circle at 50% 35%,transparent 24%,rgba(21,10,31,.24) 72%);
+  pointer-events:none;
+}
+.remedy-visual-puja .temple-stars { z-index:3; opacity:.08; mix-blend-mode:screen; }
+.remedy-visual-puja .diya { z-index:5; bottom:48px; }
+.temple-photo-credit {
+  position:absolute; z-index:7; top:8px; right:9px; max-width:70%;
+  color:rgba(238,225,245,.72); font-size:6px; letter-spacing:.03em;
+  background:rgba(8,5,15,.55); border:1px solid rgba(173,137,192,.18);
+  border-radius:999px; padding:4px 7px; backdrop-filter:blur(5px);
+}
+@keyframes templePhotoDrift { from{transform:scale(1.035) translate3d(0,0,0)} to{transform:scale(1.09) translate3d(-1.2%,-1.1%,0)} }
+@media(prefers-reduced-motion:reduce){.temple-photo{animation:none!important}}
+
+/* Vision-derived palm crease colors. They are intentionally subtle until Jyotishi
+   focuses a line, then the existing active glow becomes dominant. */
+.palm-trace.heart_line .palm-trace-stroke { stroke: rgba(255, 126, 114, .94); }
+.palm-trace.head_line .palm-trace-stroke { stroke: rgba(120, 180, 255, .94); }
+.palm-trace.life_line .palm-trace-stroke { stroke: rgba(104, 222, 139, .94); }
+.palm-trace.fate_line .palm-trace-stroke { stroke: rgba(255, 210, 96, .94); }
+.palm-trace.heart_line.active .palm-trace-stroke { stroke: rgb(255, 140, 128); }
+.palm-trace.head_line.active .palm-trace-stroke { stroke: rgb(134, 190, 255); }
+.palm-trace.life_line.active .palm-trace-stroke { stroke: rgb(118, 232, 152); }
+.palm-trace.fate_line.active .palm-trace-stroke { stroke: rgb(255, 216, 112); }
+
+/* Confidence is communicated by dash pattern, not by fading the line into
+   invisibility: solid = traced clearly, dashed = approximate vision trace,
+   dotted = estimated from hand-landmark geometry rather than seen in the photo. */
+.palm-trace.approximate .palm-trace-halo,
+.palm-trace.approximate .palm-trace-stroke { stroke-dasharray: 7 4.5; }
+.palm-trace.approximate .palm-trace-stroke { stroke-width: 2.2; }
+.palm-trace.estimated .palm-trace-halo,
+.palm-trace.estimated .palm-trace-stroke { stroke-dasharray: 1.6 4.8; }
+.palm-trace.estimated .palm-trace-stroke { stroke-width: 2.4; opacity: .9; }
+.palm-trace.estimated .palm-trace-halo { stroke-width: 5; }
+
+/* Keep the dash pattern when a dashed/dotted line is voice-focused; the draw-in
+   animation would otherwise overwrite stroke-dasharray and make it look solid. */
+.palm-trace.approximate.active .palm-trace-stroke,
+.palm-trace.estimated.active .palm-trace-stroke {
+  stroke-dashoffset: 0;
+  animation: none;
+}
+.palm-trace.approximate.active .palm-trace-stroke { stroke-dasharray: 9 4.5; stroke-width: 3.6; }
+.palm-trace.estimated.active .palm-trace-stroke { stroke-dasharray: 2.2 5; stroke-width: 3.6; opacity: 1; }
+
+/* Colour now conveys line identity (see the palm line colour system below), so the
+   estimated state is signalled by the badge text only, not by recolouring the title. */
+.line-card.status-estimated span { color: #8d7fa0; }
+
+/* High-quality Palmistry camera mode */
+.camera-stage video.camera-native { transform: none; }
+.camera-quality-panel { position: absolute; z-index: 6; top: 14px; right: 16px; display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid rgba(72,60,90,.78); border-radius: 999px; background: rgba(6,5,12,.78); backdrop-filter: blur(9px); color: #776f82; font-size: 9px; pointer-events: none; }
+.camera-quality-panel span { padding: 2px 5px; border-radius: 999px; background: rgba(255,255,255,.025); }
+.camera-quality-panel span.ok { color: #8de8b8; background: rgba(79,208,142,.08); }
+.camera-quality-panel small { color: #a294b0; font-size: 8px; white-space: nowrap; }
+.camera-device-chip { position: absolute; z-index: 5; top: 54px; right: 16px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 8px; border-radius: 999px; border: 1px solid rgba(61,51,76,.7); background: rgba(6,5,12,.66); color: #867b91; font-size: 8px; pointer-events: none; }
+.camera-stage.validating .palm-readiness { bottom: 78px; }
+@media (max-width: 900px) { .camera-quality-panel { left: 16px; right: auto; top: 52px; } .camera-device-chip { display: none; } }
+
+/* Palm camera visibility fix (2026-08-26)
+   Keep the validation guide from dimming the actual camera image. The old
+   9999px spread shadow intentionally masked everything around the guide and
+   made the palm feed look much darker than the Agora self-view. */
+.camera-stage.validating video.camera-native {
+  opacity: 1;
+  filter: brightness(1.10) contrast(1.06) saturate(1.02);
+}
+.camera-stage.validating .hand-guide,
+.camera-stage.validating .hand-guide.ready {
+  background: transparent;
+  box-shadow: inset 0 0 24px rgba(244,217,151,.035), 0 0 30px rgba(177,135,255,.08);
+}
+.camera-stage.validating .hand-guide.ready {
+  box-shadow: inset 0 0 24px rgba(99,230,163,.035), 0 0 34px rgba(92,235,167,.22);
+}
+
+
+/* Palm camera source parity fix (2026-08-26)
+   The Palmistry preview now reuses the Agora camera track when available. Also
+   force the validation preview to full opacity for BOTH mirrored front-camera
+   feeds and non-mirrored rear-camera feeds. Earlier rules only targeted
+   video.camera-native, so mirrored front camera video could still inherit the
+   legacy .72/.90 opacity and appear much darker than the Agora user tile. */
+.camera-stage.validating video {
+  opacity: 1 !important;
+  filter: brightness(1.16) contrast(1.07) saturate(1.04) !important;
+}
+.camera-stage.validating .camera-dim-mask {
+  display: none !important;
+  background: transparent !important;
+}
+.camera-stage.validating video:not(.camera-native) {
+  transform: scaleX(-1);
+}
+.camera-stage.validating video.camera-native {
+  transform: none;
+}
+
+/* Palm capture legibility (2026-08-27)
+   The captured palm is now enhanced in-canvas (CLAHE + multi-scale unsharp), so the
+   old CSS dimming/desaturation just fights that work and pushes creases back into the
+   shadows. Keep the display filter neutral and soften the vignette. */
+.camera-stage.captured .captured-palm { filter: saturate(.96) contrast(1.02) brightness(1.03); }
+.camera-stage.captured::after { box-shadow: inset 0 0 70px rgba(4,3,10,.26); }
+
+/* Legend for what each trace style means. */
+.palm-trace-legend { position: absolute; z-index: 4; left: 16px; bottom: 58px; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+.palm-trace-legend span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid rgba(86,73,101,.7); border-radius: 999px; background: rgba(8,7,14,.8); color: #9d93aa; font-size: 8.5px; backdrop-filter: blur(8px); }
+.palm-trace-legend i { width: 14px; height: 0; border-top-width: 2px; border-top-color: rgba(255,232,180,.9); }
+.palm-trace-legend i.solid { border-top-style: solid; }
+.palm-trace-legend i.dashed { border-top-style: dashed; }
+.palm-trace-legend i.dotted { border-top-style: dotted; }
+
+/* Capture diagnostics overlay (2026-08-27)
+   Projects the detected hand skeleton, the canonical landmark anchors and the palm
+   mask through the same rectifying transform the capture used, so a screenshot alone
+   shows whether landmarks, rectification or line-fitting is at fault. */
+.palm-debug-overlay { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.palm-debug-overlay .debug-mask { fill: rgba(120, 200, 255, .10); stroke: rgba(120, 200, 255, .85); stroke-width: 1.4; vector-effect: non-scaling-stroke; stroke-dasharray: 5 4; }
+.palm-debug-overlay .debug-bone { stroke: rgba(255, 122, 210, .8); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.palm-debug-overlay .debug-joint { fill: rgba(255, 240, 160, .95); }
+.palm-debug-overlay .debug-anchor { fill: none; stroke: rgba(120, 255, 180, 1); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.palm-debug-overlay .debug-anchor-label { fill: #9dffc8; font-size: 3px; font-weight: 700; paint-order: stroke; stroke: rgba(6,4,12,.9); stroke-width: 1.4px; }
+.palm-debug-toggle { position: absolute; z-index: 6; right: 16px; bottom: 58px; padding: 5px 9px; border: 1px solid rgba(86,73,101,.75); border-radius: 999px; background: rgba(8,7,14,.82); color: #8a8098; font-size: 9px; cursor: pointer; backdrop-filter: blur(8px); }
+.palm-debug-toggle.on { border-color: rgba(120,200,255,.7); color: #a8d8ff; }
+
+/* Hand-detector failure banner (2026-08-27)
+   Palmistry cannot place crease guides without landmarks, so the failure is surfaced
+   explicitly instead of silently degrading into confidently-wrong output. */
+.detector-error-banner { margin: 10px 0 4px; padding: 12px 13px; border: 1px solid rgba(226,120,110,.55); border-radius: 11px; background: linear-gradient(135deg, rgba(96,32,40,.32), rgba(60,24,44,.22)); }
+.detector-error-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+.detector-error-head strong { color: #f2b0a8; font-size: 12px; line-height: 1.35; }
+.detector-error-head .ghost-btn { flex: 0 0 auto; padding: 5px 11px; font-size: 10px; }
+.detector-error-banner p { margin: 0 0 7px; color: #c2a8b0; font-size: 11px; line-height: 1.5; }
+.detector-error-banner .detector-error-fix { color: #d6c3a8; }
+.detector-error-banner code { padding: 1px 5px; border-radius: 5px; background: rgba(6,4,12,.6); color: #ffe1a8; font-size: 10.5px; }
+.detector-error-banner details { margin-top: 4px; }
+.detector-error-banner summary { color: #9c8d99; font-size: 10px; cursor: pointer; }
+.detector-error-banner ul { margin: 6px 0 0; padding-left: 16px; }
+.detector-error-banner li { color: #8d8194; font-size: 9.5px; line-height: 1.5; word-break: break-word; }
+
+/* Palm line colour system (2026-08-27)
+   One source of truth for the four line colours, shared by the SVG traces, the overlay
+   labels and the observation cards, so a card can be matched to its line on the palm at
+   a glance. */
+:root {
+  --palm-heart: rgb(255, 126, 114);
+  --palm-head:  rgb(120, 180, 255);
+  --palm-life:  rgb(104, 222, 139);
+  --palm-fate:  rgb(255, 210, 96);
+}
+.palm-trace.heart_line { --palm-line: var(--palm-heart); }
+.palm-trace.head_line  { --palm-line: var(--palm-head); }
+.palm-trace.life_line  { --palm-line: var(--palm-life); }
+.palm-trace.fate_line  { --palm-line: var(--palm-fate); }
+
+/* Labels take the colour of their own line instead of a single shared cream. */
+.palm-trace text { fill: var(--palm-line, #ffeec2); }
+.palm-trace.active text { fill: var(--palm-line, #fff6da); }
+
+.line-card.line-heart_line { --palm-line: var(--palm-heart); }
+.line-card.line-head_line  { --palm-line: var(--palm-head); }
+.line-card.line-life_line  { --palm-line: var(--palm-life); }
+.line-card.line-fate_line  { --palm-line: var(--palm-fate); }
+
+/* Card accent: a left rule plus a swatch dot in the same colour as the trace. */
+.line-card { position: relative; padding-left: 13px; }
+.line-card::before {
+  content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px;
+  border-radius: 3px; background: var(--palm-line, #4a3d59); opacity: .85;
+}
+.line-card strong { display: flex; align-items: center; gap: 7px; color: var(--palm-line, #ddc789); }
+.line-card .line-swatch { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; background: var(--palm-line, #ddc789); box-shadow: 0 0 8px color-mix(in srgb, var(--palm-line, #ddc789) 55%, transparent); }
+.line-card.status-not_clear { --palm-line: #6b6178; }
+.line-card.status-not_clear strong { color: #9a8fa8; }
+.line-card.active { border-color: color-mix(in srgb, var(--palm-line, #e2c275) 70%, transparent); box-shadow: 0 0 20px color-mix(in srgb, var(--palm-line, #c7974a) 22%, transparent); }
+.line-card.active strong { color: var(--palm-line, #ffe19a); }
+
+/* Legend swatches stay neutral on purpose: they encode confidence (solid / dashed /
+   dotted), which is orthogonal to the colour that encodes which line it is. Colouring
+   them would imply e.g. "green = traced". */
+
+/* Remedy imagery (2026-08-31)
+   The temple visual is now local-first (`/remedies/temple.jpg`) with a drawn SVG
+   fallback. The fallback shares the photo's sizing/animation so the card looks
+   identical in layout whether or not a photograph has been installed. */
+.temple-fallback {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  filter: saturate(.9) brightness(.86) contrast(1.04);
+  transform: scale(1.035); animation: templePhotoDrift 12s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) { .temple-fallback { animation: none !important; } }
+
+/* Cosmic Thread: data-driven Vimshottari timeline (2026-08-31)
+   The node list is now derived from the chart, so it varies in length and each node
+   carries a glyph, planet name and period length instead of a bare label. */
+.thread-timeline { height: 200px; }
+.thread-timeline .timeline-node { top: 52px; width: 84px; margin-left: -42px; transform: none; }
+.thread-timeline .node-dot {
+  width: 26px; height: 26px; margin: 0 auto; display: grid; place-items: center;
+  font-size: 13px; color: #cbbcd9; background: #241a30; border: 2px solid #18101f;
+  box-shadow: 0 0 0 2px #4a3a5c;
+}
+.thread-timeline .timeline-node strong { margin-top: 10px; font-size: 11px; color: #b6a8c4; }
+.thread-timeline .timeline-node small { display: block; margin-top: 2px; color: #6f647d; font-size: 9px; white-space: nowrap; }
+.thread-timeline .timeline-node.past .node-dot { opacity: .45; }
+.thread-timeline .timeline-node.past strong { color: #7d7189; }
+.thread-timeline .timeline-node.current .node-dot {
+  background: radial-gradient(circle at 35% 30%, #f0cf8a, #a97b3f);
+  color: #23180f; box-shadow: 0 0 0 2px #d0aa57, 0 0 22px rgba(208,170,87,.6);
+}
+.thread-timeline .timeline-node.current strong { color: #f0d9a2; }
+.thread-timeline .timeline-node.current small { color: #d8bd80; }
+/* A planet Jyotishi is currently discussing is ringed in the same green the rest of the
+   experience uses for live conversational focus. */
+.thread-timeline .timeline-node.spoken .node-dot { box-shadow: 0 0 0 2px #74d79a, 0 0 20px rgba(107,212,116,.5); }
+.thread-timeline .timeline-node.spoken strong { color: #b6f0c6; }
+.timeline-caption {
+  position: absolute; left: 0; right: 0; bottom: 12px; text-align: center;
+  color: #6b6178; font-size: 9px; letter-spacing: .02em;
+}
+.branch-card.active { border-color: rgba(116,215,154,.5); box-shadow: 0 0 22px rgba(107,212,116,.12); }
+.branch-card .ghost-btn { width: 100%; font-size: 10px; }
+.branch-card .ghost-btn:disabled { opacity: .45; cursor: default; }
+
+/* 2026-09-10: planet-specific animated Kundli guidance visuals. */
+.planet-guidance-visual { --guidance-accent:#f1c85a; --guidance-glow:rgba(241,200,90,.34); isolation:isolate; }
+.planet-guidance-visual::after { content:""; position:absolute; inset:0; pointer-events:none; background:radial-gradient(circle at 50% 36%,var(--guidance-glow),transparent 38%); opacity:.72; z-index:0; }
+
+/* Puja: altar, aura, smoke and planetary motif replace the old repeated temple photo. */
+.remedy-visual-puja.planet-guidance-visual { background:radial-gradient(circle at 50% 38%,rgba(45,29,61,.96),rgba(12,8,20,.98) 64%,#07050d 100%); }
+.ritual-scene{position:absolute;inset:0;width:100%;height:100%;z-index:1;overflow:visible}.shrine-arch,.shrine-inner{fill:none;stroke:color-mix(in srgb,var(--guidance-accent) 46%,#7f5c72);stroke-width:3}.shrine-inner{stroke-width:1.5;opacity:.65}.shrine-canopy{fill:rgba(55,31,48,.88);stroke:color-mix(in srgb,var(--guidance-accent) 55%,#b88654);stroke-width:2}.shrine-trim{fill:none;stroke:var(--guidance-accent);stroke-width:2;opacity:.55}.shrine-halo{animation:ritualAuraSvg 4.2s ease-in-out infinite}.ritual-mandala{fill:none;stroke:var(--guidance-accent);stroke-width:1.5;stroke-dasharray:3 7;opacity:.62;transform-origin:210px 112px;animation:ritualMandala var(--guidance-motion) linear infinite}.ritual-mandala.inner{stroke-dasharray:1 6;animation-direction:reverse;animation-duration:calc(var(--guidance-motion) * .72)}.ritual-symbol-svg{fill:color-mix(in srgb,var(--guidance-accent) 82%,white);font:76px Georgia,serif;filter:drop-shadow(0 0 9px var(--guidance-glow));transform-origin:210px 112px;animation:dioramaPulse 4.8s ease-in-out infinite}.altar-top{stroke:color-mix(in srgb,var(--guidance-accent) 35%,#9a694e);stroke-width:2}.altar-base{stroke:#6e4a3b;stroke-width:2}.floating-island{transform-origin:210px 230px;animation:dioramaFloat 5.8s ease-in-out infinite;filter:drop-shadow(0 22px 18px rgba(0,0,0,.65))}.diorama-orbit{fill:none;stroke:var(--guidance-accent);stroke-width:1;stroke-dasharray:4 10;opacity:.28;transform-origin:210px 178px;animation:ritualMandala var(--guidance-motion) linear infinite}.orbit-near{animation-direction:reverse;animation-duration:calc(var(--guidance-motion) * .65)}.ritual-lamp{filter:drop-shadow(0 0 9px #ff9b32)}.svg-flame-outer{transform-box:fill-box;transform-origin:center bottom;animation:svgFlame 1.25s ease-in-out infinite alternate}.svg-flame-inner{transform-box:fill-box;transform-origin:center bottom;animation:svgFlame .9s ease-in-out infinite alternate-reverse}.svg-smoke{stroke-dasharray:15 8;animation:svgSmoke 5s linear infinite}.incense-1 .svg-smoke{animation-delay:-2.2s}.flower-bed circle,.ritual-sparks circle{transform-box:fill-box;transform-origin:center;animation:ritualSpark 4s ease-in-out infinite}.ritual-sparks circle{opacity:.18}.ritual-vessels{filter:drop-shadow(0 0 6px var(--guidance-glow))}
+.ritual-sky { position:absolute; inset:0; z-index:0; background:linear-gradient(180deg,rgba(255,255,255,.025),transparent 42%),radial-gradient(circle at 18% 20%,rgba(255,255,255,.08) 0 1px,transparent 1.4px); background-size:auto,31px 31px; animation:ritualSkyDrift 18s linear infinite; }
+.ritual-aura { position:absolute; left:50%; top:39%; width:138px; height:138px; border-radius:50%; transform:translate(-50%,-50%); background:radial-gradient(circle,var(--guidance-glow),transparent 66%); filter:blur(2px); animation:ritualAura 3.6s ease-in-out infinite; z-index:1; }
+.ritual-symbol { position:absolute; left:50%; top:31%; transform:translate(-50%,-50%); z-index:4; color:var(--guidance-accent); font-size:54px; line-height:1; text-shadow:0 0 18px var(--guidance-glow); animation:ritualSymbolFloat 5.5s ease-in-out infinite; }
+.ritual-orbit { position:absolute; left:50%; top:34%; border:1px solid color-mix(in srgb,var(--guidance-accent) 45%,transparent); border-radius:50%; transform:translate(-50%,-50%) rotate(-8deg); z-index:2; }
+.ritual-orbit.orbit-a { width:155px; height:54px; animation:ritualOrbit 12s linear infinite; }.ritual-orbit.orbit-b { width:115px; height:115px; opacity:.34; animation:ritualOrbit 9s linear infinite reverse; }
+.ritual-altar { position:absolute; left:50%; bottom:58px; width:184px; height:76px; transform:translateX(-50%); z-index:5; border-radius:50% 50% 12px 12px/22px 22px 12px 12px; background:linear-gradient(180deg,rgba(126,81,49,.5),rgba(35,20,23,.92)); border:1px solid color-mix(in srgb,var(--guidance-accent) 35%,transparent); box-shadow:0 18px 26px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.08); }
+.ritual-altar::before { content:""; position:absolute; left:-12px; right:-12px; bottom:-8px; height:15px; border-radius:9px; background:linear-gradient(180deg,rgba(105,66,44,.86),rgba(28,16,20,.95)); border:1px solid rgba(255,255,255,.05); }
+.altar-offering,.altar-flame { position:absolute; bottom:13px; font-size:31px; filter:drop-shadow(0 0 10px var(--guidance-glow)); }.offering-main{left:22px;animation:offeringFloat 4.6s ease-in-out infinite}.altar-flame{left:50%;transform:translateX(-50%);font-size:36px;animation:altarFlame 1.4s ease-in-out infinite alternate}.offering-secondary{right:22px;animation:offeringFloat 4.6s ease-in-out .8s infinite}
+.ritual-smoke { position:absolute; bottom:102px; width:14px; height:62px; border-radius:50%; border-left:2px solid color-mix(in srgb,var(--guidance-accent) 28%,transparent); filter:blur(.4px); opacity:.55; z-index:3; animation:ritualSmoke 4.4s ease-in-out infinite; }.smoke-a{left:45%}.smoke-b{left:56%;animation-delay:1.5s}
+.ritual-particles i { position:absolute; bottom:58px; width:3px; height:3px; border-radius:50%; background:var(--guidance-accent); box-shadow:0 0 8px var(--guidance-accent); opacity:0; animation:ritualParticle 4.8s ease-in infinite; z-index:3; }
+.ritual-motif { position:absolute; top:14px; left:14px; z-index:6; color:color-mix(in srgb,var(--guidance-accent) 72%,white); font-size:7px; letter-spacing:.18em; font-weight:900; border:1px solid color-mix(in srgb,var(--guidance-accent) 25%,transparent); border-radius:999px; padding:5px 8px; background:rgba(8,6,14,.44); }
+
+/* Mantra: planetary glyph + moving mala + sound rings. */
+.remedy-visual-mantra.planet-guidance-visual { background:radial-gradient(circle at 50% 44%,var(--guidance-glow),rgba(25,13,38,.86) 45%,rgba(9,6,17,.99) 74%); }
+.mantra-planet-symbol { position:absolute; top:15px; left:16px; color:var(--guidance-accent); font-size:24px; text-shadow:0 0 12px var(--guidance-glow); z-index:5; }
+.remedy-visual-mantra.planet-guidance-visual .mantra-om { color:color-mix(in srgb,var(--guidance-accent) 44%,#f4e8ff); text-shadow:0 0 18px var(--guidance-glow); }
+.remedy-visual-mantra.planet-guidance-visual .mantra-ring { border-color:color-mix(in srgb,var(--guidance-accent) 42%,transparent); }
+.remedy-visual-mantra.planet-guidance-visual .mantra-wave i { background:var(--guidance-accent); }
+.mala-infinity{position:absolute;left:50%;top:44%;width:92%;height:62%;transform:translate(-50%,-50%);z-index:3;overflow:visible;filter:drop-shadow(0 0 9px var(--guidance-glow));animation:malaBreathe 5.2s ease-in-out infinite}.mala-thread{fill:none;stroke:color-mix(in srgb,var(--guidance-accent) 45%,#b68a54);stroke-width:2}.mala-bead-svg{fill:color-mix(in srgb,var(--guidance-accent) 74%,#38251f);stroke:color-mix(in srgb,var(--guidance-accent) 55%,white);stroke-width:1;transform-box:fill-box;transform-origin:center;animation:malaBead 2.8s ease-in-out infinite;animation-delay:calc(var(--bead-index) * -90ms)}.mantra-material{position:absolute;left:50%;bottom:57px;transform:translateX(-50%);z-index:6;color:color-mix(in srgb,var(--guidance-accent) 70%,white);font-size:7px;letter-spacing:.18em;text-transform:uppercase;opacity:.78}
+
+/* Gemstone: preserve real gem palette, add planetary identity and moving sparkles. */
+.gem-planet-symbol { position:absolute; top:14px; left:16px; color:var(--guidance-accent); font-size:24px; z-index:7; text-shadow:0 0 12px var(--guidance-glow); }
+.gem-sparkles i { position:absolute; width:4px; height:4px; border-radius:50%; background:#fff; box-shadow:0 0 8px #fff; opacity:0; animation:gemSparkle 4.2s ease-in-out infinite; z-index:6; }
+.gem-sparkles i:nth-child(1){left:20%;top:27%}.gem-sparkles i:nth-child(2){left:73%;top:31%}.gem-sparkles i:nth-child(3){left:64%;top:62%}.gem-sparkles i:nth-child(4){left:28%;top:66%}.gem-sparkles i:nth-child(5){left:82%;top:52%}.gem-sparkles i:nth-child(6){left:42%;top:18%}
+.planet-guidance-visual .gemstone-model{animation:gemDioramaFloat 5.4s ease-in-out infinite}.planet-guidance-visual .gem-orbit{animation-duration:var(--guidance-motion)}.planet-guidance-visual .gem-shine{animation:gemLightSweep 4.6s ease-in-out infinite}
+.guidance-sun{--scene-energy:1.15}.guidance-moon{--scene-energy:.72}.guidance-mars{--scene-energy:1.28}.guidance-mercury{--scene-energy:1.08}.guidance-jupiter{--scene-energy:.88}.guidance-venus{--scene-energy:.76}.guidance-saturn{--scene-energy:.55}.guidance-rahu{--scene-energy:1.2}.guidance-ketu{--scene-energy:.62}
+
+/* Practice: each planet gets a distinct activity scene instead of the same diya. */
+.remedy-visual-practice.planet-guidance-visual { background:linear-gradient(180deg,rgba(16,12,29,.96),rgba(11,8,18,.98)); }
+.practice-planet-symbol { position:absolute; top:14px; right:16px; color:var(--guidance-accent); font-size:25px; text-shadow:0 0 12px var(--guidance-glow); z-index:5; }
+.practice-landscape { position:relative; z-index:4; width:74%; height:112px; display:grid; place-items:center; border-radius:58% 58% 18px 18px/68% 68% 18px 18px; background:linear-gradient(180deg,color-mix(in srgb,var(--guidance-accent) 14%,transparent),rgba(12,9,18,.14)),radial-gradient(circle at 50% 86%,var(--guidance-glow),transparent 52%); border-bottom:1px solid color-mix(in srgb,var(--guidance-accent) 32%,transparent); overflow:hidden; }
+.practice-icon { font-size:64px; line-height:1; filter:drop-shadow(0 0 16px var(--guidance-glow)); animation:practiceFloat 4s ease-in-out infinite; }
+.practice-path { position:absolute; left:50%; bottom:-18px; width:88px; height:56px; transform:translateX(-50%) perspective(90px) rotateX(63deg); border-radius:50%; background:linear-gradient(180deg,color-mix(in srgb,var(--guidance-accent) 24%,transparent),transparent); }
+.practice-copy { position:absolute; top:17px; left:17px; z-index:6; color:color-mix(in srgb,var(--guidance-accent) 70%,white); font-size:8px; font-weight:800; letter-spacing:.08em; }
+.practice-breath { position:absolute; left:50%; top:44%; border:1px solid color-mix(in srgb,var(--guidance-accent) 28%,transparent); border-radius:50%; transform:translate(-50%,-50%); z-index:2; animation:practiceBreath 4.4s ease-out infinite; }.breath-a{width:100px;height:100px}.breath-b{width:150px;height:150px;animation-delay:1.8s}
+
+@keyframes ritualSkyDrift{to{background-position:0 0,16px 20px}}
+@keyframes ritualAura{50%{transform:translate(-50%,-50%) scale(1.13);opacity:.66}}
+@keyframes ritualSymbolFloat{50%{transform:translate(-50%,-56%) scale(1.04)}}
+@keyframes ritualOrbit{to{transform:translate(-50%,-50%) rotate(352deg)}}
+@keyframes offeringFloat{50%{transform:translateY(-5px)}}
+@keyframes altarFlame{to{transform:translateX(-50%) scale(1.08) translateY(-2px);filter:drop-shadow(0 0 16px var(--guidance-accent))}}
+@keyframes ritualSmoke{0%{transform:translateY(12px) scaleX(.8);opacity:0}35%{opacity:.55}100%{transform:translate(12px,-34px) scaleX(1.25);opacity:0}}
+@keyframes ritualParticle{0%{transform:translateY(0) scale(.7);opacity:0}18%{opacity:.75}100%{transform:translateY(-125px) scale(1.2);opacity:0}}
+@keyframes ritualAuraSvg{50%{opacity:.6;transform:scale(1.08);transform-origin:210px 102px}}
+@keyframes ritualMandala{to{transform:rotate(360deg)}}
+@keyframes svgFlame{to{transform:scale(.86,1.12) rotate(2deg)}}
+@keyframes svgSmoke{to{stroke-dashoffset:-46;opacity:.12}}
+@keyframes ritualSpark{50%{opacity:.82;transform:translateY(-4px) scale(1.2)}}
+@keyframes dioramaFloat{50%{transform:translateY(-7px) scale(1.015)}}
+@keyframes dioramaPulse{50%{transform:scale(1.08);opacity:.82}}
+@keyframes malaBreathe{50%{transform:translate(-50%,-50%) scale(1.035) rotate(.8deg)}}
+@keyframes malaBead{0%,100%{opacity:.52;transform:scale(.82)}50%{opacity:1;transform:scale(1.22)}}
+@keyframes gemDioramaFloat{50%{transform:translateY(-10px) rotate(2deg);filter:drop-shadow(0 19px 16px rgba(0,0,0,.42)) drop-shadow(0 0 16px var(--guidance-glow))}}
+
+/* 2026-09-10: Cosmic Thread celestial-story redesign. */
+.thread-scene{grid-template-rows:auto minmax(170px,22vh) minmax(260px,1fr) auto;gap:10px}
+.thread-scene .scene-copy h2{font-size:clamp(26px,2.2vw,36px)}
+.thread-timeline{height:auto!important;min-height:170px!important;padding:44px 24px 36px!important;overflow:hidden;background:radial-gradient(circle at 53% 52%,rgba(210,173,89,.11),transparent 27%),radial-gradient(circle at 20% 15%,rgba(122,83,187,.12),transparent 24%),linear-gradient(180deg,rgba(25,17,38,.95),rgba(12,9,22,.98))}
+.thread-timeline:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.38;background-image:radial-gradient(circle,#bda7d8 0 1px,transparent 1.4px);background-size:57px 43px}
+.thread-timeline-head{position:absolute;top:12px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;color:#b995ef;font-size:9px;letter-spacing:.13em;z-index:3}
+.thread-legend{display:flex;gap:14px;color:#91859e;letter-spacing:0;text-transform:none}.thread-legend span:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:#766b82}.thread-legend .current:before{background:#e5b958;box-shadow:0 0 9px #d9a946}.thread-legend .future:before{background:#9c65df}
+.thread-scene .thread-timeline .timeline-line{top:76px;left:6%;right:6%;height:2px;background:linear-gradient(90deg,#494054,#d5a84d 58%,#9a5bd6);z-index:1}
+.thread-scene .thread-timeline .timeline-node{top:62px;width:72px;margin-left:-36px;z-index:2}
+.thread-scene .thread-timeline .node-dot{width:28px;height:28px;margin:0 auto;border-color:#15101e;background:#241b31}
+.thread-scene .thread-timeline .timeline-node strong{margin-top:7px;font-size:10px}.thread-scene .thread-timeline .timeline-node small{font-size:8px;margin-top:1px}
+.thread-scene .thread-timeline .timeline-caption{left:12px;right:12px;bottom:9px;height:24px;padding:0 10px;border:1px solid rgba(110,86,135,.25);border-radius:8px;background:rgba(10,7,17,.64);display:flex;align-items:center;justify-content:space-between;text-align:left;font-size:8px;z-index:3}.thread-timeline .timeline-caption strong{color:#dabb76;font-size:8px;letter-spacing:.08em;text-transform:uppercase}
+.thread-scene .branch-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.thread-scene .branch-card{padding:10px;overflow:hidden;background:linear-gradient(180deg,rgba(28,19,41,.96),rgba(13,10,22,.98))}.thread-card-visual{height:clamp(82px,12vh,120px);position:relative;display:grid;place-items:center;border-radius:12px;overflow:hidden;background:radial-gradient(circle at 50% 48%,rgba(193,137,255,.28),transparent 34%),linear-gradient(180deg,#171027,#0c0914);border:1px solid rgba(123,90,158,.24)}
+.thread-card-visual:before{content:"";position:absolute;inset:0;opacity:.42;background-image:radial-gradient(circle,#e6d6fa 0 1px,transparent 1.4px);background-size:37px 29px}.thread-card-symbol{position:relative;z-index:3;font-size:38px;color:#e7bd63;filter:drop-shadow(0 0 13px rgba(229,185,88,.55));animation:threadSymbolFloat 4.5s ease-in-out infinite}.thread-card-orbit{position:absolute;width:65%;height:42%;border:1px solid rgba(204,155,255,.4);border-radius:50%;transform:rotate(-12deg);animation:threadOrbit 8s linear infinite}.orbit-b{width:43%;height:68%;transform:rotate(58deg);animation-direction:reverse;animation-duration:11s}
+.visual-career{background:linear-gradient(165deg,rgba(77,43,91,.35),rgba(12,9,20,.9)),radial-gradient(circle at 65% 25%,rgba(236,171,72,.28),transparent 30%)}.career-path{position:absolute;left:12%;bottom:9%;width:76%;height:58%;border-top:3px solid #e4ae4f;border-radius:50%;transform:rotate(-18deg);filter:drop-shadow(0 0 8px #dca34a)}
+.visual-relationships{background:radial-gradient(circle at 35% 55%,rgba(197,82,207,.34),transparent 25%),radial-gradient(circle at 65% 55%,rgba(68,137,226,.32),transparent 25%),#100b1b}.visual-relationships .thread-card-symbol{font-size:52px;color:#efb4f2}
+.visual-remedies{background:radial-gradient(circle at 50% 82%,rgba(239,148,57,.35),transparent 38%),linear-gradient(180deg,#1b1122,#0c0912)}.ritual-flame{position:absolute;bottom:11px;font-size:43px;color:#f5bd5f;filter:drop-shadow(0 0 14px #e68a38);animation:altarFlame 1.4s ease-in-out infinite alternate}.ritual-planet{position:absolute;right:24%;top:17%;font-size:22px;color:#f0c971;text-shadow:0 0 11px #d7963f}
+.visual-gemstones{background:radial-gradient(circle at 50% 52%,rgba(226,49,65,.38),transparent 30%),#120912}.visual-gemstones .thread-card-symbol{font-size:52px;color:#f24857;transform:rotate(45deg);text-shadow:inset 0 0 8px white}.gem-reflection{position:absolute;width:80px;height:16px;bottom:12px;border-radius:50%;background:rgba(241,53,72,.2);filter:blur(5px);box-shadow:0 0 25px #dc3044}
+.branch-eyebrow{margin-top:8px;color:#a78bc7;font-size:7px;font-weight:900;letter-spacing:.12em}.thread-scene .branch-card h3{margin:3px 0 6px;font-size:16px}.thread-scene .branch-card p{margin:6px 0;font-size:9px;line-height:1.42;color:#94869f}.thread-scene .tag-row span{font-size:8px;padding:3px 6px}.gem-safety{margin:0 0 6px;color:#d9ad58;font-size:8px}.thread-scene .branch-card .ghost-btn{border-color:rgba(220,174,83,.6);color:#d9c391;margin-top:auto}
+@keyframes threadSymbolFloat{50%{transform:translateY(-6px) scale(1.04)}}@keyframes threadOrbit{to{transform:rotate(348deg)}}
+@media(max-width:1180px){.thread-scene{overflow:auto;grid-template-rows:auto 175px auto auto}.thread-scene .branch-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.thread-card-symbol,.thread-card-orbit,.ritual-flame{animation:none!important}}
+.branch-card.selected{border-color:rgba(229,185,88,.8);box-shadow:0 0 0 1px rgba(229,185,88,.18),0 0 28px rgba(203,139,55,.2)}.branch-card.selected .thread-card-visual{border-color:rgba(229,185,88,.56)}.branch-card.selected .thread-card-symbol{filter:drop-shadow(0 0 19px rgba(241,193,89,.85))}.thread-selection-status{position:fixed;left:50%;bottom:21px;z-index:30;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid rgba(229,185,88,.45);border-radius:999px;background:rgba(16,11,24,.94);box-shadow:0 8px 28px rgba(0,0,0,.42);color:#a99bb5;font-size:9px}.thread-selection-status span,.thread-selection-status strong{color:#e5bd6d}
+.kundli-chart-key{display:flex;justify-content:center;gap:12px;align-items:center;margin:-2px auto 4px;color:#766a83;font-size:8px}.kundli-chart-key strong{color:#ba9ae1;text-transform:uppercase;letter-spacing:.1em}.kundli-chart-key span{padding-left:10px;border-left:1px solid #342740}
+@keyframes gemLightSweep{0%,20%{transform:translateX(-180%) rotate(22deg);opacity:0}45%{opacity:.8}70%,100%{transform:translateX(180%) rotate(22deg);opacity:0}}
+@keyframes malaRotate{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes gemSparkle{0%,100%{opacity:0;transform:scale(.4)}45%{opacity:.85;transform:scale(1.25)}}
+@keyframes practiceBreath{0%{transform:translate(-50%,-50%) scale(.72);opacity:.55}100%{transform:translate(-50%,-50%) scale(1.28);opacity:0}}
+
+@media (prefers-reduced-motion: reduce) {
+  .ritual-sky,.ritual-aura,.ritual-symbol,.ritual-orbit,.altar-offering,.altar-flame,.ritual-smoke,.ritual-particles i,
+  .mala-orbit,.mala-infinity,.mala-bead-svg,.gemstone-model,.gem-shine,.diorama-orbit,.floating-island,.ritual-symbol-svg,.gem-sparkles i,.practice-icon,.practice-breath { animation:none!important; }
+}
