@@ -11,7 +11,17 @@ import { extractBirthProfile } from './services/profileExtractor.js';
 import { analyzePalmWithVision } from './services/palmVision.js';
 
 const app = express();
-app.use(cors({ origin: config.frontendUrl }));
+// `*` opts out of the allow-list entirely; otherwise only the configured frontend
+// origins may call the API from a browser. Requests without an Origin header
+// (curl, health checks, server-to-server) are always allowed.
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || config.frontendUrls.includes('*')) return callback(null, true);
+    // Reject by omitting the header rather than erroring, so the browser blocks the
+    // response without the API returning a 500.
+    return callback(null, config.frontendUrls.includes(origin.replace(/\/+$/, '')));
+  }
+}));
 app.use(express.json({ limit: '8mb' }));
 
 app.get('/api/health', (_req, res) => {

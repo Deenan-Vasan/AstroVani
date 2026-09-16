@@ -23,9 +23,27 @@ function numberEnv(name: string, fallback: number, allowZero = false) {
   return value > 0 ? value : fallback;
 }
 
+function listEnv(name: string) {
+  return (process.env[name] || '').split(',').map(v => v.trim().replace(/\/+$/, '')).filter(Boolean);
+}
+
+/**
+ * Frontend origins that are always allowed through CORS. The deployed site lives on
+ * a different host than this API (frontend: astrovaniai, backend: astrovani), so
+ * every browser call to it is cross-origin. Baked in so a backend deploy needs no
+ * extra environment config; FRONTEND_URL adds to this list rather than replacing
+ * it, for Vercel preview domains and one-off hosts.
+ */
+const KNOWN_FRONTEND_ORIGINS = [
+  'http://localhost:5173',
+  'https://astrovaniai.agoraaidemo.in',
+  // Same-origin callers, e.g. hitting the API host directly or a future co-hosted build.
+  'https://astrovani.agoraaidemo.in'
+];
+
 export const config = {
   port: Number(process.env.PORT || 3000),
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  frontendUrls: [...new Set([...KNOWN_FRONTEND_ORIGINS, ...listEnv('FRONTEND_URL')])],
   mockMode: (process.env.MOCK_MODE ?? 'true') === 'true',
   agora: {
     appId: (process.env.AGORA_APP_ID || '').trim(),

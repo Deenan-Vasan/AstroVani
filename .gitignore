@@ -9,6 +9,8 @@ frontend/public/models/
 frontend/public/remedies/*
 !frontend/public/remedies/README.md
 .env
+.env.local
+.env.*.local
 frontend/dist
 backend/dist
 .DS_Store

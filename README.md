@@ -33,6 +33,61 @@ TTS diagnostics: `http://localhost:3000/api/diagnostics/tts`
 
 Avatar diagnostics: `http://localhost:3000/api/diagnostics/avatar`
 
+## Deployment (Vercel frontend, EC2 backend)
+
+| | Host |
+|---|---|
+| Frontend | `https://astrovaniai.agoraaidemo.in` (Vercel) |
+| Backend | `https://astrovani.agoraaidemo.in` (EC2, nginx in front of Node on :3000) |
+
+Two origins, so the app calls the API absolutely and the backend must allow the
+frontend origin in CORS. Both sides are already configured in the repo.
+
+**Frontend (Vercel project):**
+
+- Root directory: the repository root. `vercel.json` sets the build for this npm
+  workspace: `npm run build -w frontend`, output `frontend/dist`. The `prebuild`
+  step downloads the MediaPipe hand-detector assets (~8 MB) into
+  `frontend/public`, which is why they are not committed.
+- `frontend/.env.production` is committed with
+  `VITE_API_BASE_URL=https://astrovani.agoraaidemo.in`. To change the backend
+  origin per environment, set `VITE_API_BASE_URL` in the Vercel project's
+  environment variables — no trailing slash, no `/api` suffix.
+- Add `astrovaniai.agoraaidemo.in` as a domain on the Vercel project and point the
+  DNS record at Vercel.
+
+**Backend (EC2):**
+
+- The CORS allow-list in `backend/src/config.ts` already contains
+  `https://astrovaniai.agoraaidemo.in`, `https://astrovani.agoraaidemo.in` and
+  `http://localhost:5173`, so a redeploy needs no environment change.
+  `FRONTEND_URL` **adds** further comma-separated origins — needed for Vercel
+  preview deployments, which get their own `*.vercel.app` hostnames:
+
+  ```bash
+  FRONTEND_URL=https://astrovani-git-my-branch-acme.vercel.app
+  ```
+
+  `*` allows any origin. Restart the backend after changing it.
+- nginx only needs to forward `/api` to the Node process, but raise its body limit:
+  `/api/palm/analyze` posts base64 palm images and Express accepts up to 8 MB,
+  while nginx defaults to 1 MB.
+
+  ```nginx
+  location /api/ {
+      proxy_pass http://127.0.0.1:3000;
+      proxy_http_version 1.1;
+      client_max_body_size 16m;
+  }
+  ```
+
+- Keep HTTPS on both hosts. A page served over HTTPS cannot call a plain-HTTP
+  backend, and the microphone and camera capture used by the voice journey and
+  Palmistry require a secure origin.
+
+To point a local dev server at the EC2 backend instead of a local one, set
+`VITE_API_BASE_URL=https://astrovani.agoraaidemo.in` in `frontend/.env.local`.
+
 ## Live integration values
 
 ```bash
