@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createSession, extractBirthProfile, updateAgentChart, updateAgentPalm } from './api';
+import { createSession, extractBirthProfile, updateAgentChart, updateAgentLanguage, updateAgentPalm } from './api';
 import { TopBar } from './components/TopBar';
 import { GuidePanel } from './components/GuidePanel';
 import { JourneyRail } from './components/JourneyRail';
@@ -920,7 +920,16 @@ export default function App() {
 
   const handleTranscriptEvent = useCallback(async (event: TranscriptEvent) => {
     if (event.speaker === 'user') {
-      languageRef.current = nextLanguage(languageRef.current, event.text);
+      const previousLanguage = languageRef.current;
+      languageRef.current = nextLanguage(previousLanguage, event.text);
+      if (languageRef.current !== previousLanguage && agentIdRef.current) {
+        // The agent trusts the SCRIPT of the transcript, which is wrong when English is
+        // heard as Tamil letters. Tell it the language the app has worked out.
+        console.log(`[AstroVani] Conversation language ${previousLanguage} -> ${languageRef.current}; informing agent.`);
+        void updateAgentLanguage(agentIdRef.current, languageRef.current).catch(error => {
+          console.warn('[AstroVani] Failed to update agent language', error);
+        });
+      }
       // `emit()` appends to transcriptRef before invoking this callback, so the user's
       // line is already the last entry.
       lastUserTurnIndexRef.current = transcriptRef.current.length - 1;

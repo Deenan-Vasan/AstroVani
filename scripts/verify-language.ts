@@ -3,7 +3,7 @@
 // Dependency-free: `npm run verify:language`.
 import {
   TRANSITION_SENTENCES, birthSkyIntro, cosmicThreadIntro, detectScriptLanguage, inHouse,
-  isLocalizedNextSectionRequest, kundliIntro, localizedChapterRequest, localizedPlanetMentions,
+  isLocalizedNextSectionRequest, isTransliteratedEnglish, kundliIntro, localizedChapterRequest, localizedPlanetMentions,
   nextLanguage, palmistryIntro, palmOpening, palmRetakeMessage, palmLineFallback, palmLineFromLocalizedText, stripQuotedText, sceneFromLocalizedTransition, spokenDasha, spokenDegree, spokenNumber,
   transitionSentence, type ChapterKey, type LangCode
 } from '../frontend/src/lib/language.js';
@@ -114,6 +114,19 @@ check('Tamil Birth Sky intro uses Tamil names and words', /மிதுனம்
 check('Telugu falls back to English intro', palmistryIntro('te') === palmistryIntro('en'));
 check('Marathi uses the Hindi intro', palmistryIntro('mr') === palmistryIntro('hi'));
 check('missing Sun is handled in every language', (['en', 'hi', 'ta'] as LangCode[]).every(l => birthSkyIntro(undefined, l).length > 20));
+
+// --- English heard as Tamil/Devanagari letters -------------------------------------------------------
+eq('"where is Saturn" in Tamil letters is English', nextLanguage('ta', 'வேர் இஸ் சாத்தான்?'), 'en');
+eq('"tell me about" in Tamil letters is English', nextLanguage('ta', 'டெல் மீ அபௌட் மை கரியர்'), 'en');
+eq('"what is" in Devanagari letters is English', nextLanguage('hi', 'व्हाट इज़ माय करियर'), 'en');
+eq('real Tamil sentence stays Tamil', nextLanguage('ta', 'என் பெயர் ராஜ்'), 'ta');
+eq('real Tamil with one loan word stays Tamil', nextLanguage('ta', 'எனக்கு கரியர் பற்றி சொல்லுங்கள்'), 'ta');
+eq('real Hindi stays Hindi', nextLanguage('hi', 'मेरा करियर कैसा रहेगा'), 'hi');
+eq('single "ஓகே" does not switch', nextLanguage('ta', 'ஓகே'), 'ta');
+check('too short to judge', !isTransliteratedEnglish('வேர்'));
+eq('transliterated Saturn is a planet mention', first('வேர் இஸ் சாத்தான்'), 'Saturn');
+eq('transliterated Jupiter', first('ஜூபிடர் பற்றி சொல்லு'), 'Jupiter');
+eq('Devanagari Venus', first('वीनस के बारे में'), 'Venus');
 
 // --- palm narration follows the conversation language ----------------------------------------------
 const heart = { id: 'heart_line' as const, name: 'Heart line', traditionalReading: 'Traditionally associated with emotional expression.', observation: 'long and curved' };

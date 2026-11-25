@@ -58,6 +58,32 @@ export function detectScriptLanguage(text: string): LangCode | 'latin' | undefin
   return 'latin';
 }
 
+/**
+ * Common English words as the recogniser spells them in Tamil and Devanagari when it
+ * mis-hears English speech as Tamil or Hindi. A message made mostly of these is English.
+ */
+const TRANSLITERATED_ENGLISH = new Set([
+  // Tamil script
+  'வேர்', 'இஸ்', 'வாட்', 'டெல்', 'மீ', 'அபௌட்', 'அபவுட்', 'அபௌட', 'மை', 'தி', 'கேன்', 'யூ', 'ஷோ', 'நெக்ஸ்ட்',
+  'செக்ஷன்', 'ப்ளீஸ்', 'பிளீஸ்', 'யெஸ்', 'நோ', 'ஹாய்', 'ஹலோ', 'தேங்க்ஸ்', 'தேங்க்', 'ஹவ்', 'வொய்', 'வெண்',
+  'ஹூ', 'திஸ்', 'தட்', 'வித்', 'அண்ட்', 'பட்', 'இட்', 'ஆர்', 'அம்', 'ஆன்', 'இன்', 'ஆஃப்', 'ஃபார்', 'டூ', 'ஐ',
+  'லெட்ஸ்', 'கோ', 'டு', 'வில்', 'வாண்ட்', 'நீட்', 'எக்ஸ்ப்ளைன்', 'எக்ஸ்பிளைன்', 'டெல்லிங்', 'கரியர்', 'மேரேஜ்',
+  'ஹெல்த்', 'லைஃப்', 'ஃபியூச்சர்', 'பிளேஸ்', 'ப்ளேஸ்', 'பிளானட்', 'பிளானெட்', 'ப்ளானட்', 'ஹவுஸ்', 'சைன்',
+  // Devanagari
+  'वेयर', 'वेअर', 'इज़', 'इज', 'व्हाट', 'वॉट', 'टेल', 'मी', 'अबाउट', 'माय', 'द', 'कैन', 'यू', 'शो', 'नेक्स्ट',
+  'सेक्शन', 'प्लीज', 'प्लीज़', 'येस', 'यस', 'नो', 'हाय', 'हेलो', 'हैलो', 'थैंक्स', 'हाउ', 'व्हाई', 'हू', 'दिस',
+  'दैट', 'विद', 'एंड', 'बट', 'इट', 'आर', 'ऑन', 'इन', 'ऑफ', 'फॉर', 'लेट्स', 'गो', 'विल', 'वांट', 'नीड', 'करियर',
+  'मैरिज', 'हेल्थ', 'लाइफ', 'फ्यूचर', 'प्लेस', 'प्लैनेट', 'हाउस', 'साइन', 'एक्सप्लेन'
+]);
+
+/** True when a Tamil/Devanagari message is mostly English words written phonetically. */
+export function isTransliteratedEnglish(text: string): boolean {
+  const tokens = text.split(/[\s.,!?;:।'"()\-]+/u).filter(t => /[\u0900-\u097F\u0B80-\u0BFF]/u.test(t));
+  if (tokens.length < 2) return false;
+  const hits = tokens.filter(t => TRANSLITERATED_ENGLISH.has(t)).length;
+  return hits >= 2 && hits / tokens.length >= 0.4;
+}
+
 const EXPLICIT_REQUESTS: Array<[LangCode, RegExp]> = [
   ['hi', /\b(?:in|speak|talk|reply|switch to|continue in|answer in)\s+hindi\b/i],
   ['hi', /(?:हिंदी|हिन्दी)\s*(?:में|मे)/],
@@ -85,6 +111,9 @@ export function nextLanguage(previous: LangCode, text: string): LangCode {
   for (const [lang, pattern] of EXPLICIT_REQUESTS) {
     if (pattern.test(text)) return lang;
   }
+  // The recogniser sometimes writes English speech in Tamil/Devanagari letters
+  // ("வேர் இஸ் சாத்தான்" = "where is Saturn"); that is English, whatever the script.
+  if (isTransliteratedEnglish(text)) return 'en';
   const detected = detectScriptLanguage(text);
   if (!detected) return previous;
   if (detected !== 'latin') return detected;
@@ -296,13 +325,13 @@ export function localizedChapterRequest(text: string): Exclude<ChapterKey, 'intr
 // ("சூரியனை", "गुरु से"), so these are stems; weekday names that share a stem
 // (मंगलवार, சனிக்கிழமை) are excluded.
 const LOCALIZED_PLANETS: Array<{ planet: (typeof PLANETS)[number]; pattern: RegExp }> = [
-  { planet: 'Sun', pattern: /(?:सूर्य|सूरज|சூரிய)/u },
-  { planet: 'Moon', pattern: /(?:चंद्र|चन्द्र|चांद|चाँद|சந்திர)/u },
-  { planet: 'Mars', pattern: /(?:मंगल(?!वार)|செவ்வாய்)/u },
-  { planet: 'Mercury', pattern: /(?:बुध(?!वार)|புதன்)/u },
-  { planet: 'Jupiter', pattern: /(?:बृहस्पति|गुरु(?!वार)|வியாழன்|குரு)/u },
-  { planet: 'Venus', pattern: /(?:शुक्र(?!वार)|சுக்கிர|வெள்ளி(?!க்?\s*கிழமை))/u },
-  { planet: 'Saturn', pattern: /(?:शनि(?!वार)|சனி(?!க்?\s*கிழமை))/u },
+  { planet: 'Sun', pattern: /(?:सूर्य|सूरज|சூரிய|(?<![\u0B80-\u0BFF])சன்(?![\u0B80-\u0BFF])|(?<![\u0900-\u097F])सन(?![\u0900-\u097F]))/u },
+  { planet: 'Moon', pattern: /(?:चंद्र|चन्द्र|चांद|चाँद|சந்திர|(?<![\u0B80-\u0BFF])மூன்(?![\u0B80-\u0BFF])|(?<![\u0900-\u097F])मून(?![\u0900-\u097F]))/u },
+  { planet: 'Mars', pattern: /(?:मंगल(?!वार)|செவ்வாய்|மார்ஸ்|मार्स)/u },
+  { planet: 'Mercury', pattern: /(?:बुध(?!वार)|புதன்|மெர்குரி|மர்குரி|मर्करी|मरकरी)/u },
+  { planet: 'Jupiter', pattern: /(?:बृहस्पति|गुरु(?!वार)|வியாழன்|குரு|ஜூபிடர்|ஜுபிடர்|ஜூபிட்டர்|जुपिटर|ज्यूपिटर)/u },
+  { planet: 'Venus', pattern: /(?:शुक्र(?!वार)|சுக்கிர|வெள்ளி(?!க்?\s*கிழமை)|வீனஸ்|वीनस)/u },
+  { planet: 'Saturn', pattern: /(?:शनि(?!वार)|சனி(?!க்?\s*கிழமை)|சாட்டர்ன்|சாடர்ன்|சேட்டர்ன்|சாத்தான்|सैटर्न)/u },
   { planet: 'Rahu', pattern: /(?:राहु|ராகு)/u },
   { planet: 'Ketu', pattern: /(?:केतु|கேது)/u }
 ];

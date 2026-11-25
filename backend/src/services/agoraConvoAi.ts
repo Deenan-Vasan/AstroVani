@@ -38,7 +38,24 @@ function requireLiveAgentConfig() {
   }
 }
 
-async function systemPrompt(profile?: StartAgentInput['profile'], palmContext?: string) {
+/** Language names for the per-turn language directive. */
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', mr: 'Marathi', kn: 'Kannada'
+};
+
+/**
+ * What the app last told each running agent. Agora's update call REPLACES the system prompt,
+ * so every re-brief (chart, palm, language) must resend the context the others set.
+ */
+const agentContexts = new Map<string, { profile?: StartAgentInput['profile']; palmContext?: string; language?: string }>();
+
+function rememberAgent(agentId: string, patch: { profile?: StartAgentInput['profile']; palmContext?: string; language?: string }) {
+  const next = { ...(agentContexts.get(agentId) || {}), ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) };
+  agentContexts.set(agentId, next);
+  return next;
+}
+
+async function systemPrompt(profile?: StartAgentInput['profile'], palmContext?: string, language?: string) {
   // The agent must be briefed on exactly the chart the user is looking at. When the
   // profile is not yet known (voice onboarding is still collecting it) the generator's
   // default seed is used, and the frontend shows that same default.
@@ -49,8 +66,10 @@ async function systemPrompt(profile?: StartAgentInput['profile'], palmContext?: 
     ? `Known birth profile for this session: name=${profile.name || 'unknown'}, date=${profile.date || 'unknown'}, time=${profile.time || 'unknown'}, place=${profile.place || 'unknown'}, preferred language=${profile.language || 'auto'}.`
     : 'Birth profile status is initially unknown. Infer collected fields from the conversation. Once a field is provided, remember it for the rest of this agent session. Once the Birth Sky has opened, the birth profile is COMPLETE and must never be requested again.';
 
+  const languageName = language ? LANGUAGE_NAMES[language] : undefined;
   return [
     'You are Jyotishi, the conversational guide for AstroVani: The Cosmic Journey.',
+    ...(languageName ? [`CURRENT CONVERSATION LANGUAGE: the application has determined that the user is now speaking ${languageName}. Reply in ${languageName} from your next message, even if the recogniser wrote the user's words in another script. Change only when the user clearly speaks a different language.`] : []),
     'Speak naturally, warmly, and concisely. Match the language the user speaks whenever practical.',
     ...multilingualPromptRules(),
     'The startup greeting is delivered by Agora through llm.greeting_message in the join request. CRITICAL: do not generate any conversational question before the user has responded to that greeting. The first user detail must be their name. Never ask for date of birth, time, or place before a name has actually been provided by the user.',
@@ -306,10 +325,11 @@ function llmParams() {
  * mismatch as the hardcoded prompt, just arriving later.
  */
 export async function updateAgoraAgentChart(agentId: string, profile: StartAgentInput['profile']) {
+  const ctx = rememberAgent(agentId, { profile });
   const body = {
     properties: {
       llm: {
-        system_messages: [{ role: 'system', content: await systemPrompt(profile) }],
+        system_messages: [{ role: 'system', content: await systemPrompt(ctx.profile, ctx.palmContext, ctx.language) }],
         params: llmParams()
       }
     }
@@ -337,10 +357,11 @@ export async function updateAgoraAgentPalm(
   profile: StartAgentInput['profile'] | undefined,
   palmContext: string
 ) {
+  const ctx = rememberAgent(agentId, { profile, palmContext });
   const body = {
     properties: {
       llm: {
-        system_messages: [{ role: 'system', content: await systemPrompt(profile, palmContext) }],
+        system_messages: [{ role: 'system', content: await systemPrompt(ctx.profile, ctx.palmContext, ctx.language) }],
         params: llmParams()
       }
     }
@@ -356,6 +377,31 @@ export async function updateAgoraAgentPalm(
   const responseText = await response.text();
   console.log(`[ConvoAI] PALM CONTEXT UPDATE ${response.status}:`, responseText);
   if (!response.ok) throw new Error(`Agora palm context update failed (${response.status}): ${responseText.slice(0, 500)}`);
+  return responseText ? JSON.parse(responseText) : { success: true };
+}
+
+/** Tell a running agent which language the user is speaking now (the app decides this, not the script of the transcript). */
+export async function updateAgoraAgentLanguage(agentId: string, language: string) {
+  const ctx = rememberAgent(agentId, { language });
+  const body = {
+    properties: {
+      llm: {
+        system_messages: [{ role: 'system', content: await systemPrompt(ctx.profile, ctx.palmContext, ctx.language) }],
+        params: llmParams()
+      }
+    }
+  };
+  const response = await fetch(
+    `${config.agora.convoAiBaseUrl}/${config.agora.appId}/agents/${encodeURIComponent(agentId)}/update`,
+    {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: authHeader() },
+      body: JSON.stringify(body)
+    }
+  );
+  const responseText = await response.text();
+  console.log(`[ConvoAI] LANGUAGE UPDATE (${language}) ${response.status}:`, responseText);
+  if (!response.ok) throw new Error(`Agora language update failed (${response.status}): ${responseText.slice(0, 500)}`);
   return responseText ? JSON.parse(responseText) : { success: true };
 }
 
@@ -416,6 +462,7 @@ export async function thinkAgoraAgent(agentId: string, text: string) {
 }
 
 export async function stopAgoraAgent(agentId: string) {
+  agentContexts.delete(agentId);
   const response = await fetch(
     `${config.agora.convoAiBaseUrl}/${config.agora.appId}/agents/${encodeURIComponent(agentId)}/leave`,
     {
