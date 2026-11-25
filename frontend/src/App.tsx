@@ -11,7 +11,7 @@ import { CosmicThreadScene } from './scenes/CosmicThreadScene';
 import { useAgoraSession, type AgentActivityState, type TranscriptEvent, type UiSignal } from './hooks/useAgoraSession';
 import type { BirthProfile, ChartData, PalmResult, SceneName } from './types';
 import {
-  birthSkyIntro, cosmicThreadIntro, isLocalizedNextSectionRequest, kundliIntro, localizedChapterRequest,
+  birthSkyIntro, cosmicThreadIntro, detectScriptLanguage, isLocalizedNextSectionRequest, kundliIntro, localizedChapterRequest,
   isLocalizedGuidanceRequest, localizedGuidanceKind, mentionsLocalizedKundliSubject,
   localizedPlanetMentions, nextLanguage, palmLineFallback, palmLineFromLocalizedText, palmOpening, palmRetakeMessage,
   palmistryIntro, sceneFromLocalizedTransition, stripQuotedText, transitionSentence,
@@ -781,6 +781,10 @@ export default function App() {
   // the wording of the application's own scripted lines; the agent replies in the user's
   // language by itself (see the system prompt).
   const languageRef = useRef<LangCode>('en');
+  // What the user has said since the agent last finished a reply, and whether the agent's
+  // answer to it has already been checked for being in the right language.
+  const recentUserTextsRef = useRef<string[]>([]);
+  const replyLanguageCheckedRef = useRef(true);
   // Timers that walk the planet highlight through a multi-planet answer in time with the
   // spoken audio. Cleared on any new turn or interruption.
   const pacedHighlightTimersRef = useRef<number[]>([]);
@@ -968,6 +972,8 @@ export default function App() {
   const handleTranscriptEvent = useCallback(async (event: TranscriptEvent) => {
     if (event.speaker === 'user') {
       applyUserLanguage(event.text, true);
+      recentUserTextsRef.current = [...recentUserTextsRef.current, event.text].slice(-4);
+      replyLanguageCheckedRef.current = false;
       // `emit()` appends to transcriptRef before invoking this callback, so the user's
       // line is already the last entry.
       lastUserTurnIndexRef.current = transcriptRef.current.length - 1;
@@ -977,6 +983,8 @@ export default function App() {
       clearPacedHighlights();
     }
     if (event.speaker === 'agent') {
+      recentUserTextsRef.current = [];
+      replyLanguageCheckedRef.current = true;
       palmLineFallbackRequestRef.current = null;
       if (palmLineFallbackTimerRef.current) {
         window.clearTimeout(palmLineFallbackTimerRef.current);
@@ -1478,6 +1486,22 @@ export default function App() {
 
   const handleAgentTranscriptProgress = useCallback((event: TranscriptEvent) => {
     if (event.speaker !== 'agent') return;
+
+    // Safety net: the language update can reach the agent after it has already started
+    // answering (and a bare "2020." gives it no language clue, so it follows the earlier
+    // Tamil/Hindi history). If the user is in English but the reply starts in another script,
+    // stop it and have the agent answer what the user said again, in English.
+    if (!replyLanguageCheckedRef.current && event.text.trim()) {
+      replyLanguageCheckedRef.current = true;
+      const script = detectScriptLanguage(event.text);
+      const userText = recentUserTextsRef.current.join(' ').trim();
+      if (languageRef.current === 'en' && script && script !== 'latin' && script !== 'en' && userText && agentIdRef.current) {
+        console.warn(`[AstroVani] Agent began replying in ${script} while the user is speaking English; re-asking in English.`);
+        void agora.switchLanguage('en', userText).catch(error => {
+          console.warn('[AstroVani] English re-ask failed', error);
+        });
+      }
+    }
 
     // The normal turn has started. Cancel the silence watchdog before doing any visual
     // parsing so a slow, streaming answer is never duplicated by /speak.
