@@ -731,6 +731,7 @@ export default function App() {
   const threadIntroSpokenRef = useRef(false);
   const pendingChapterSignalRef = useRef<SceneName | null>(null);
   const birthSkyAutoIntroTimerRef = useRef<number | undefined>(undefined);
+  const agentActivityRef = useRef<AgentActivityState>('unknown');
   const kundliAutoIntroTimerRef = useRef<number | undefined>(undefined);
   const palmAutoIntroTimerRef = useRef<number | undefined>(undefined);
   const threadAutoIntroTimerRef = useRef<number | undefined>(undefined);
@@ -940,6 +941,10 @@ export default function App() {
   }, []);
 
   const handleUserPartial = useCallback((event: TranscriptEvent) => {
+    // Real in-progress speech arrives while the agent is listening or silent. A "user" packet
+    // while the agent is thinking ('unknown') or talking is the agent's own words handed back
+    // (echo), so it must neither switch the language nor cancel the Birth Sky introduction.
+    if (agentActivityRef.current !== 'listening' && agentActivityRef.current !== 'silent') return;
     applyUserLanguage(event.text, false);
     if (event.text.trim().length >= 3) {
       // The user has started speaking. Do not let the scripted Birth Sky introduction start
@@ -1546,6 +1551,7 @@ export default function App() {
   }, [scene]);
 
   const handleAgentState = useCallback((activity: AgentActivityState) => {
+    agentActivityRef.current = activity;
     // Keep agent-state diagnostics, but do not use generic `silent` as the primary
     // transition trigger. In some ConvoAI builds it can arrive before the final
     // assistant transcription for the same turn. The completed transition sentence

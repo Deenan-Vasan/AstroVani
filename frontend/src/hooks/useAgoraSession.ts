@@ -7,6 +7,7 @@ import AgoraRTC, {
   type UID
 } from 'agora-rtc-sdk-ng';
 import type { BirthProfile } from '../types';
+import { isScriptedAgentPhrase } from '../lib/language';
 import { createAgoraRtcSession, speakAgoraAgent, startAgoraAgent, stopAgoraAgent, thinkAgoraAgent, updateAgentLanguage } from '../api';
 
 export type AgoraConnectionState = 'idle' | 'connecting' | 'connected' | 'error';
@@ -119,6 +120,11 @@ export function useAgoraSession(
     pendingTurnsRef.current.delete(key);
     let normalized = pending.text.trim();
     if (!normalized) return;
+
+    if (pending.speaker === 'user' && isScriptedAgentPhrase(normalized)) {
+      console.debug('[ConvoAI] Suppressed scripted agent phrase reported as user transcription:', normalized);
+      return;
+    }
 
     if (pending.speaker === 'user' && shouldSuppressUserEcho(
       normalized,
@@ -240,7 +246,7 @@ export function useAgoraSession(
         onTranscriptProgressRef.current?.({ speaker: 'agent', text: transcriptText });
       }
 
-      if (speaker === 'user') {
+      if (speaker === 'user' && !isScriptedAgentPhrase(transcriptText)) {
         // The user's words arrive progressively while they are still speaking. Expose them
         // early (never rendered) so the app can react before the agent starts its reply.
         onUserPartialRef.current?.({ speaker: 'user', text: transcriptText });

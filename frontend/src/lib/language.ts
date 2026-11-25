@@ -518,3 +518,16 @@ export function stripQuotedText(text: string): string {
     .replace(/["“”][^"“”]*["“”]/g, ' ')
     .replace(/(^|[\s(])['‘][^'‘’]*['’]/g, '$1 ');
 }
+
+/**
+ * Is this one of the application's own scripted phrases (chapter transition sentence)?
+ * Some Conversational AI builds hand the agent's words back as USER transcription, so a
+ * "user" line that is exactly a transition sentence is never real speech and must not
+ * count as the user speaking, switch the language, or cancel an introduction.
+ */
+export function isScriptedAgentPhrase(text: string): boolean {
+  return /\b(?:the birth sky|your kundli|kundli|palmistry|the cosmic thread) is opening now\b/i.test(text)
+    || /\breturning to arrival now\b/i.test(text)
+    || /\bi have everything i need\b/i.test(text)
+    || sceneFromLocalizedTransition(text) !== undefined;
+}

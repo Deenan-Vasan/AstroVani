@@ -3,7 +3,7 @@
 // Dependency-free: `npm run verify:language`.
 import {
   TRANSITION_SENTENCES, birthSkyIntro, cosmicThreadIntro, detectScriptLanguage, inHouse,
-  isLocalizedNextSectionRequest, isTransliteratedEnglish, kundliIntro, localizedChapterRequest, localizedPlanetMentions,
+  isLocalizedNextSectionRequest, isScriptedAgentPhrase, isTransliteratedEnglish, kundliIntro, localizedChapterRequest, localizedPlanetMentions,
   nextLanguage, palmistryIntro, palmOpening, palmRetakeMessage, palmLineFallback, palmLineFromLocalizedText, stripQuotedText, sceneFromLocalizedTransition, spokenDasha, spokenDegree, spokenNumber,
   transitionSentence, type ChapterKey, type LangCode
 } from '../frontend/src/lib/language.js';
@@ -127,6 +127,12 @@ check('too short to judge', !isTransliteratedEnglish('வேர்'));
 eq('transliterated Saturn is a planet mention', first('வேர் இஸ் சாத்தான்'), 'Saturn');
 eq('transliterated Jupiter', first('ஜூபிடர் பற்றி சொல்லு'), 'Jupiter');
 eq('Devanagari Venus', first('वीनस के बारे में'), 'Venus');
+
+// --- the agent's scripted phrases are never user speech --------------------------------------------
+check('English transition phrase is scripted', isScriptedAgentPhrase('Thank you. I have everything I need. The Birth Sky is opening now.'));
+check('Tamil transition phrase is scripted', isScriptedAgentPhrase('பிறப்பு வானம் இப்போது திறக்கிறது.'));
+check('Hindi transition phrase is scripted', isScriptedAgentPhrase('हस्तरेखा अब खुल रही है।'));
+check('real question is not scripted', !isScriptedAgentPhrase('Where is the Moon?') && !isScriptedAgentPhrase('சந்திரன் எங்கே உள்ளது?'));
 
 // --- palm narration follows the conversation language ----------------------------------------------
 const heart = { id: 'heart_line' as const, name: 'Heart line', traditionalReading: 'Traditionally associated with emotional expression.', observation: 'long and curved' };
