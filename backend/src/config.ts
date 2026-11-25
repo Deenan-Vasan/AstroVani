@@ -23,6 +23,15 @@ function numberEnv(name: string, fallback: number, allowZero = false) {
   return value > 0 ? value : fallback;
 }
 
+/** Default recognition languages: Indian English plus the Indian languages the product targets. */
+const DEFAULT_ASR_LANGUAGE = 'en-IN,ta-IN,hi-IN,te-IN,mr-IN,kn-IN';
+
+/** AGORA_ASR_LANGUAGE as a clean comma-separated BCP-47 string (no spaces, no empties, no duplicates). */
+function asrLanguageEnv() {
+  const tags = (process.env.AGORA_ASR_LANGUAGE || DEFAULT_ASR_LANGUAGE).split(',').map(v => v.trim()).filter(Boolean);
+  return [...new Set(tags.length ? tags : DEFAULT_ASR_LANGUAGE.split(','))].join(',');
+}
+
 function listEnv(name: string) {
   return (process.env[name] || '').split(',').map(v => v.trim().replace(/\/+$/, '')).filter(Boolean);
 }
@@ -54,7 +63,10 @@ export const config = {
     avatarUid: numberEnv('AGORA_AVATAR_UID', 10001),
     avatarToken: (process.env.AGORA_AVATAR_TOKEN || '').trim(),
     agentIdleTimeoutSeconds: numberEnv('AGORA_AGENT_IDLE_TIMEOUT_SECONDS', 120),
-    asrLanguageHints: (process.env.AGORA_ASR_LANGUAGE_HINTS || 'en,hi,ta,te,mr,kn').split(',').map(v => v.trim()).filter(Boolean),
+    // ARES takes ONE comma-separated string of BCP-47 tags in asr.language (required; it
+    // otherwise falls back to en-US, which is why Tamil speech went unrecognised). More than one
+    // language makes ARES recognise them together with no explicit switching.
+    asrLanguage: asrLanguageEnv(),
     greeting: process.env.AGORA_AGENT_GREETING || 'Namaste. Welcome to AstroVani, The Cosmic Journey. Together we can explore your birth sky, Kundli, palm, and life timeline through a live visual journey. To begin, tell me your name in any language.',
     greetingInterruptible: boolEnv('AGORA_GREETING_INTERRUPTIBLE', false),
     forceGreetingViaSpeak: boolEnv('AGORA_FORCE_GREETING_VIA_SPEAK', false),

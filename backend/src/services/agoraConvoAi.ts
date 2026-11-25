@@ -51,6 +51,7 @@ async function systemPrompt(profile?: StartAgentInput['profile'], palmContext?: 
   return [
     'You are Jyotishi, the conversational guide for AstroVani: The Cosmic Journey.',
     'Speak naturally, warmly, and concisely. Match the language the user speaks whenever practical.',
+    'The speech recognizer understands English, Hindi, Tamil, Telugu, Marathi and Kannada together. The user may speak or switch between them at any time, including giving their name or birth place in their own language and script. Never ask the user to change language or to repeat in English; reply in the language of their most recent message, and keep names exactly as they were given.',
     'The startup greeting is delivered by Agora through llm.greeting_message in the join request. CRITICAL: do not generate any conversational question before the user has responded to that greeting. The first user detail must be their name. Never ask for date of birth, time, or place before a name has actually been provided by the user.',
     'After the user gives their name, collect the remaining birth profile conversationally, one detail at a time: date of birth, exact birth time, then birth place.',
     'Do not ask for all details in one sentence. Ask only the next missing detail after the user answers.',
@@ -211,9 +212,8 @@ export async function startAgoraAgent(input: StartAgentInput): Promise<AgoraAgen
       idle_timeout: config.agora.agentIdleTimeoutSeconds,
       asr: {
         vendor: 'ares',
-        params: {
-          language_hints: config.agora.asrLanguageHints
-        }
+        // Required by ARES. A comma-separated list recognises several languages at once.
+        language: config.agora.asrLanguage
       },
       ...(config.agora.enableUiTools ? { advanced_features: { enable_tools: true } } : {}),
       llm: {
