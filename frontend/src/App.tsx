@@ -50,6 +50,10 @@ const planetNames = ['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn','R
  * start of the conversational turn. The agent's planet/highlight publish_message remains
  * authoritative reinforcement once it arrives.
  */
+function normalizeForEcho(text: string) {
+  return text.toLowerCase().replace(/[\s.,!?;:।'"“”‘’-]+/g, '');
+}
+
 function planetFromUserText(text: string) {
   const normalized = text.toLowerCase();
   const candidates = planetNames
@@ -784,6 +788,9 @@ export default function App() {
   // What the user has said since the agent last finished a reply, and whether the agent's
   // answer to it has already been checked for being in the right language.
   const recentUserTextsRef = useRef<string[]>([]);
+  // The agent's own most recent words (normalised), used to recognise them when Agora hands
+  // them back as user speech.
+  const recentAgentTextRef = useRef('');
   const replyLanguageCheckedRef = useRef(true);
   // Timers that walk the planet highlight through a multi-planet answer in time with the
   // spoken audio. Cleared on any new turn or interruption.
@@ -956,6 +963,10 @@ export default function App() {
     // while the agent is thinking ('unknown') or talking is the agent's own words handed back
     // (echo), so it must neither switch the language nor cancel the Birth Sky introduction.
     if (agentActivityRef.current !== 'listening' && agentActivityRef.current !== 'silent') return;
+    // Echo of the agent's own sentence (any fragment of it): not the user speaking. Without
+    // this, a piece of the Tamil closing line cancelled the Birth Sky introduction.
+    const heard = normalizeForEcho(event.text);
+    if (heard.length >= 8 && recentAgentTextRef.current.includes(heard.slice(0, 24))) return;
     applyUserLanguage(event.text, false);
     if (event.text.trim().length >= 3) {
       // The user has started speaking. Do not let the scripted Birth Sky introduction start
@@ -1486,6 +1497,9 @@ export default function App() {
 
   const handleAgentTranscriptProgress = useCallback((event: TranscriptEvent) => {
     if (event.speaker !== 'agent') return;
+    if (event.text.trim()) {
+      recentAgentTextRef.current = (recentAgentTextRef.current + ' ' + normalizeForEcho(event.text)).slice(-1200);
+    }
 
     // Safety net: the language update can reach the agent after it has already started
     // answering (and a bare "2020." gives it no language clue, so it follows the earlier
