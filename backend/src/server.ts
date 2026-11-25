@@ -6,7 +6,7 @@ import { config } from './config.js';
 import { generateChart } from './services/chartGenerator.js';
 import { getIntegrationStatus } from './services/integrationStatus.js';
 import { makeChannelName, makeRtcUid } from './services/agoraRtcSession.js';
-import { getAvatarDiagnostics, getTtsDiagnostics, speakAgoraAgent, startAgoraAgent, stopAgoraAgent, thinkAgoraAgent, updateAgoraAgentChart, updateAgoraAgentPalm } from './services/agoraConvoAi.js';
+import { getAvatarDiagnostics, getTtsDiagnostics, speakAgoraAgent, startAgoraAgent, stopAgoraAgent, thinkAgoraAgent, updateAgoraAgentChart, updateAgoraAgentLanguage, updateAgoraAgentPalm } from './services/agoraConvoAi.js';
 import { extractBirthProfile } from './services/profileExtractor.js';
 import { analyzePalmWithVision } from './services/palmVision.js';
 
@@ -201,6 +201,23 @@ app.post('/api/agora/agent/speak', async (req, res) => {
   } catch (error) {
     console.error('Agora agent speak failed:', error);
     return res.status(502).json({ error: error instanceof Error ? error.message : 'Unable to speak through Agora agent.' });
+  }
+});
+
+app.post('/api/agora/agent/language', async (req, res) => {
+  const agentId = String(req.body?.agentId || '');
+  const language = String(req.body?.language || '');
+  if (!agentId || !/^[a-z]{2}$/.test(language)) return res.status(400).json({ error: 'agentId and a two-letter language are required' });
+  try {
+    await updateAgoraAgentLanguage(agentId, language);
+    // The update reaches the agent after it has begun answering in the old language. Re-ask the
+    // utterance so the answer is produced under the new instruction (interrupts the old reply).
+    const replayText = String(req.body?.replayText || '').trim().slice(0, 500);
+    if (replayText) await thinkAgoraAgent(agentId, replayText, 'language_switch');
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Agora agent language update failed:', error);
+    return res.status(502).json({ error: error instanceof Error ? error.message : 'Unable to update agent language.' });
   }
 });
 

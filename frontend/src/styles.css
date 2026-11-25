@@ -820,3 +820,7 @@ html, body, #root { height: 100%; overflow: hidden; }
   .ritual-sky,.ritual-aura,.ritual-symbol,.ritual-orbit,.altar-offering,.altar-flame,.ritual-smoke,.ritual-particles i,
   .mala-orbit,.mala-infinity,.mala-bead-svg,.gemstone-model,.gem-shine,.diorama-orbit,.floating-island,.ritual-symbol-svg,.gem-sparkles i,.practice-icon,.practice-breath { animation:none!important; }
 }
+
+/* Arrival card taller than the viewport (small laptop windows, zoomed browsers) must scroll. */
+.stage:has(> .birth-card) { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #4a385b transparent; }
+.stage > .birth-card { margin: 3vh auto; }

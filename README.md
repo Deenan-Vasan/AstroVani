@@ -164,6 +164,16 @@ The main Journey Flow stays cinematic: Arrival → Birth Sky → Kundli → Palm
 Birth-chart and palm outputs are still illustrative/mock data in this milestone. The Birth Sky and Kundli use one consistent mock dataset so the animation, cards and Jyotishi responses do not contradict each other. Replace the backend mock chart service with a deterministic astrology engine later without changing the experience layer.
 
 
+## Multilingual conversation
+
+Jyotishi follows the user between English, Hindi, Tamil, Telugu, Marathi and Kannada without being asked, including mixed speech such as Hinglish and Tanglish.
+
+- **ASR (Agora ARES):** `AGORA_ASR_LANGUAGE` is a comma-separated list of BCP-47 tags sent as `asr.language`. ARES recognises them together. Several languages mean voice-activity detection (not semantic) decides when the user has finished speaking.
+- **LLM:** the system prompt (`backend/src/services/languageGuide.ts`) tells the model to follow the user's language, mirror code-mixing, write native script, and spell numbers as words so TTS does not read digits in English.
+- **App scripts:** chapter introductions and transition sentences are translated for Hindi and Tamil (`frontend/src/lib/language.ts`); other languages use English for those lines (Marathi uses the Hindi lines). The app infers the conversation language from the script of what the user says. Chapter changes are recognised from the exact transition sentences listed in the prompt, so the prompt and `language.ts` must stay in sync (`npm run verify:language` checks this).
+- **TTS (Murf):** one voice serves the whole session. Choose a Murf voice that supports your languages (`MURF_VOICE_ID`, `MURF_LOCALE`, optional `MURF_EXTRA_PARAMS_JSON`); an English-only voice speaks Hindi and Tamil with an English accent.
+- **Translations:** Hindi and Tamil text should be reviewed by native speakers before launch. Telugu and Kannada scripted lines are not translated yet.
+
 ## Greeting and transcription reliability
 
 This build uses Agora's native `llm.greeting_message` as the only startup greeting path. Keep `AGORA_GREETING_INTERRUPTIBLE=false` and `AGORA_FORCE_GREETING_VIA_SPEAK=false` so the greeting is not interrupted or replayed by a second `/speak` request.

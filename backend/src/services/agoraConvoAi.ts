@@ -1,3 +1,4 @@
+import { multilingualPromptRules } from './languageGuide.js';
 import { config } from '../config.js';
 import { describeChartForPrompt, generateChart } from './chartGenerator.js';
 
@@ -37,7 +38,24 @@ function requireLiveAgentConfig() {
   }
 }
 
-async function systemPrompt(profile?: StartAgentInput['profile'], palmContext?: string) {
+/** Language names for the per-turn language directive. */
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', mr: 'Marathi', kn: 'Kannada'
+};
+
+/**
+ * What the app last told each running agent. Agora's update call REPLACES the system prompt,
+ * so every re-brief (chart, palm, language) must resend the context the others set.
+ */
+const agentContexts = new Map<string, { profile?: StartAgentInput['profile']; palmContext?: string; language?: string }>();
+
+function rememberAgent(agentId: string, patch: { profile?: StartAgentInput['profile']; palmContext?: string; language?: string }) {
+  const next = { ...(agentContexts.get(agentId) || {}), ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) };
+  agentContexts.set(agentId, next);
+  return next;
+}
+
+async function systemPrompt(profile?: StartAgentInput['profile'], palmContext?: string, language?: string) {
   // The agent must be briefed on exactly the chart the user is looking at. When the
   // profile is not yet known (voice onboarding is still collecting it) the generator's
   // default seed is used, and the frontend shows that same default.
@@ -48,9 +66,12 @@ async function systemPrompt(profile?: StartAgentInput['profile'], palmContext?: 
     ? `Known birth profile for this session: name=${profile.name || 'unknown'}, date=${profile.date || 'unknown'}, time=${profile.time || 'unknown'}, place=${profile.place || 'unknown'}, preferred language=${profile.language || 'auto'}.`
     : 'Birth profile status is initially unknown. Infer collected fields from the conversation. Once a field is provided, remember it for the rest of this agent session. Once the Birth Sky has opened, the birth profile is COMPLETE and must never be requested again.';
 
+  const languageName = language ? LANGUAGE_NAMES[language] : undefined;
   return [
     'You are Jyotishi, the conversational guide for AstroVani: The Cosmic Journey.',
+    ...(languageName ? [`CURRENT CONVERSATION LANGUAGE: the application last detected ${languageName} in the user's speech. Treat this only as a hint, because it can be one turn behind. The user's LATEST message decides the language of your reply: if the latest message is clearly English, reply in English, and if it is clearly Hindi or Tamil, reply in that language. A message with no language of its own (a bare number, year or name) keeps the language of the user's last clear sentence, which may be newer than this hint. Ignore the language of your own earlier replies, which must never pull you back into the previous language. Even if the recogniser wrote the words in another script, reply in the language the user actually spoke.`] : []),
     'Speak naturally, warmly, and concisely. Match the language the user speaks whenever practical.',
+    ...multilingualPromptRules(),
     'The startup greeting is delivered by Agora through llm.greeting_message in the join request. CRITICAL: do not generate any conversational question before the user has responded to that greeting. The first user detail must be their name. Never ask for date of birth, time, or place before a name has actually been provided by the user.',
     'After the user gives their name, collect the remaining birth profile conversationally, one detail at a time: date of birth, exact birth time, then birth place.',
     'Do not ask for all details in one sentence. Ask only the next missing detail after the user answers.',
@@ -68,13 +89,14 @@ async function systemPrompt(profile?: StartAgentInput['profile'], palmContext?: 
     `Use this calculated chart context consistently whenever discussing the Birth Sky, Kundli or related guidance: ${chartContext}`,
     'These values are the shared context for this session. Never substitute placements from any other chart, and never invent a placement that is not listed above.',
     'The chart context is calculated from astronomical positions when complete birth details are available. If asked about accuracy, explain that Phase 1 uses Astronomy Engine, whole-sign houses, a mean lunar node, and an explicit Lahiri ayanamsha approximation that is being reference-validated.',
+    'SCOPE: You are Jyotishi, an astrology and palmistry guide. Stay within Vedic astrology, the user\'s Birth Sky, Kundli, planets, houses, dashas, traditional remedies (puja, mantra, gemstones, practices), palmistry and the Cosmic Thread, plus the birth details needed for them. Do NOT give advice on health, nutrition, alcohol, medicine, diet, legal, financial or investment decisions, relationships counselling, politics, coding, general knowledge, or any other topic, even when the user asks directly or the topic seems to follow from a planet (for example never tell the user how much to drink, eat or exercise). When asked something outside this scope, say in one short sentence, in the user\'s language, that this is outside what you can help with here, and offer to continue with their chart, Kundli, palm or a related astrology question. Never invent personal advice to fill a gap. Do not ask follow-up questions that lead outside astrology.',
     'Treat astrology and palmistry as traditional interpretive guidance, not scientific fact. Never predict death, lifespan, medical diagnoses, pregnancy outcomes, or other high-stakes outcomes.',
     'You are guiding a synchronized visual experience. Keep answers suitable for spoken delivery. If the user interrupts or changes direction, stop the current walkthrough immediately, answer the new request, and do not continue the previously queued planet sequence unless the user asks to resume.',
     'Use the predefined _publish_message tool whenever the visual experience should change. Invoke the tool structurally; NEVER print, speak, quote, repeat, or expose its JSON payload in normal assistant content. If the tool is unavailable for any reason, continue speaking naturally and OMIT the UI command entirely rather than serializing JSON into your response.',
     'Allowed UI commands are exactly: {\"type\":\"ui_signal\",\"target\":\"birth_sky\",\"action\":\"show\"}; {\"type\":\"ui_signal\",\"target\":\"kundli\",\"action\":\"show\"}; {\"type\":\"ui_signal\",\"target\":\"palmistry\",\"action\":\"show\"}; {\"type\":\"ui_signal\",\"target\":\"cosmic_thread\",\"action\":\"show\"}; and {\"type\":\"ui_signal\",\"target\":\"planet\",\"action\":\"highlight\",\"value\":\"sun|moon|mars|mercury|jupiter|venus|saturn|rahu|ketu\"}; {\"type\":\"ui_signal\",\"target\":\"kundli_guidance\",\"action\":\"highlight\",\"value\":\"puja|mantra|gemstone|practice\"}; {\"type\":\"ui_signal\",\"target\":\"palm_line\",\"action\":\"highlight\",\"value\":\"heart_line|head_line|life_line|fate_line\"}.',
     'CRITICAL UI CONTRACT: for agent-initiated visual changes, never claim that a visual chapter is open, visible, shown, or changing unless you call _publish_message for that visual intent in the same turn. EXCEPTION: when the USER explicitly requests a named chapter or the next section, the frontend already owns that navigation; in that direct navigation turn, speak the exact transition sentence and do not call _publish_message.',
     'CRITICAL BIRTH PROFILE GATE: NEVER call _publish_message with target birth_sky until name, date of birth, exact birth time, and birth place have all actually been provided by the user. Phrases such as "to open your Birth Sky", "before opening your Birth Sky", or "once I have your details" are conversational only and MUST NOT trigger a birth_sky UI signal. Only the dedicated final transition sentence "The Birth Sky is opening now." may accompany birth_sky/show, and only after all four fields are known.',
-    'After all four birth details are known: DO NOT summarize the name, date, time, and place. Say only "Thank you. I have everything I need. The Birth Sky is opening now." and call _publish_message with EXACT content {"type":"ui_signal","target":"birth_sky","action":"show"} in that turn. END THAT ASSISTANT TURN immediately after the sentence. Do not add Birth Sky interpretation, planet details, or another question in the same turn. The frontend opens the visual after that completed sentence and then starts the Birth Sky introduction automatically.',
+    'After all four birth details are known: DO NOT summarize the name, date, time, and place. Say only the short lead-in "Thank you. I have everything I need." followed by the Birth Sky transition sentence, BOTH in the user\'s current language: in English "Thank you. I have everything I need. The Birth Sky is opening now."; in Tamil "நன்றி. எனக்குத் தேவையான அனைத்தும் கிடைத்துவிட்டன. பிறப்பு வானம் இப்போது திறக்கிறது."; in Hindi "धन्यवाद। मुझे जो चाहिए था सब मिल गया। जन्म आकाश अब खुल रहा है।". Never say the English sentence to a Tamil or Hindi speaker. Call _publish_message with EXACT content {"type":"ui_signal","target":"birth_sky","action":"show"} in that turn. END THAT ASSISTANT TURN immediately after the sentence. Do not add Birth Sky interpretation, planet details, or another question in the same turn, and do not start the Sun walkthrough yourself (never say "Let us begin with the Sun"): the application speaks the Birth Sky introduction, in the user\'s language. The frontend opens the visual after that completed sentence and then starts the Birth Sky introduction automatically.',
     'BIRTH SKY PLANET TOOL RULE: NEVER call _publish_message with target planet while the active chapter is Birth Sky. The AstroVani frontend owns Birth Sky planet highlighting from user intent and live assistant transcription. Speak the planetary explanation normally; do not spend the turn on a planet UI tool call. Planet _publish_message remains available for Kundli only.',
     'CRITICAL BIRTH SKY DIRECT PLANET REQUEST: If the user explicitly asks about a named planet (for example, tell me about Jupiter), treat that utterance as a fresh conversational turn even if an automatic Birth Sky introduction or another planet walkthrough was just interrupted. The AstroVani frontend already detects that user utterance and highlights the requested planet immediately. Therefore DO NOT call _publish_message for this direct user-requested planet focus. Start speaking the answer immediately in the SAME turn and explain ONLY that requested planet using its placement from the calculated chart context. A tool-only response is invalid: you must provide a normal spoken answer. Never wait for the previous walkthrough to resume and never repeat the previous planet before answering the requested one.',
     'BIRTH SKY LIVE PLANET FOCUS: prefer covering ONE planet per turn in the Birth Sky and then pausing for the user. If you move to another planet, simply name the new planet clearly in the spoken answer; the frontend follows the live assistant transcript and updates the exclusive highlight. Do NOT call the planet highlight tool in Birth Sky.',
@@ -99,6 +121,8 @@ function murfParams() {
   // Murf schema expected by Agora Conversational AI. Keep the field names
   // exactly as documented by the Agora Murf adapter.
   return {
+    // Extra parameters first so they can add options but never replace the standard fields below.
+    ...config.murf.extraParams,
     api_key: config.murf.apiKey,
     base_url: config.murf.baseUrl,
     voiceId: config.murf.voiceId,
@@ -211,9 +235,8 @@ export async function startAgoraAgent(input: StartAgentInput): Promise<AgoraAgen
       idle_timeout: config.agora.agentIdleTimeoutSeconds,
       asr: {
         vendor: 'ares',
-        params: {
-          language_hints: config.agora.asrLanguageHints
-        }
+        // Required by ARES. A comma-separated list recognises several languages at once.
+        language: config.agora.asrLanguage
       },
       ...(config.agora.enableUiTools ? { advanced_features: { enable_tools: true } } : {}),
       llm: {
@@ -303,10 +326,11 @@ function llmParams() {
  * mismatch as the hardcoded prompt, just arriving later.
  */
 export async function updateAgoraAgentChart(agentId: string, profile: StartAgentInput['profile']) {
+  const ctx = rememberAgent(agentId, { profile });
   const body = {
     properties: {
       llm: {
-        system_messages: [{ role: 'system', content: await systemPrompt(profile) }],
+        system_messages: [{ role: 'system', content: await systemPrompt(ctx.profile, ctx.palmContext, ctx.language) }],
         params: llmParams()
       }
     }
@@ -334,10 +358,11 @@ export async function updateAgoraAgentPalm(
   profile: StartAgentInput['profile'] | undefined,
   palmContext: string
 ) {
+  const ctx = rememberAgent(agentId, { profile, palmContext });
   const body = {
     properties: {
       llm: {
-        system_messages: [{ role: 'system', content: await systemPrompt(profile, palmContext) }],
+        system_messages: [{ role: 'system', content: await systemPrompt(ctx.profile, ctx.palmContext, ctx.language) }],
         params: llmParams()
       }
     }
@@ -353,6 +378,31 @@ export async function updateAgoraAgentPalm(
   const responseText = await response.text();
   console.log(`[ConvoAI] PALM CONTEXT UPDATE ${response.status}:`, responseText);
   if (!response.ok) throw new Error(`Agora palm context update failed (${response.status}): ${responseText.slice(0, 500)}`);
+  return responseText ? JSON.parse(responseText) : { success: true };
+}
+
+/** Tell a running agent which language the user is speaking now (the app decides this, not the script of the transcript). */
+export async function updateAgoraAgentLanguage(agentId: string, language: string) {
+  const ctx = rememberAgent(agentId, { language });
+  const body = {
+    properties: {
+      llm: {
+        system_messages: [{ role: 'system', content: await systemPrompt(ctx.profile, ctx.palmContext, ctx.language) }],
+        params: llmParams()
+      }
+    }
+  };
+  const response = await fetch(
+    `${config.agora.convoAiBaseUrl}/${config.agora.appId}/agents/${encodeURIComponent(agentId)}/update`,
+    {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: authHeader() },
+      body: JSON.stringify(body)
+    }
+  );
+  const responseText = await response.text();
+  console.log(`[ConvoAI] LANGUAGE UPDATE (${language}) ${response.status}:`, responseText);
+  if (!response.ok) throw new Error(`Agora language update failed (${response.status}): ${responseText.slice(0, 500)}`);
   return responseText ? JSON.parse(responseText) : { success: true };
 }
 
@@ -386,7 +436,7 @@ export async function speakAgoraAgent(agentId: string, text: string, interruptab
  * Unlike /speak, /think enters the normal conversation pipeline instead of making
  * the avatar read the supplied words verbatim.
  */
-export async function thinkAgoraAgent(agentId: string, text: string) {
+export async function thinkAgoraAgent(agentId: string, text: string, source = 'cosmic_thread_card') {
   const response = await fetch(
     `${config.agora.convoAiBaseUrl}/${config.agora.appId}/agents/${encodeURIComponent(agentId)}/think`,
     {
@@ -402,7 +452,7 @@ export async function thinkAgoraAgent(agentId: string, text: string) {
         on_thinking_action: 'interrupt',
         on_speaking_action: 'interrupt',
         interruptable: true,
-        metadata: { source: 'cosmic_thread_card' }
+        metadata: { source }
       })
     }
   );
@@ -413,6 +463,7 @@ export async function thinkAgoraAgent(agentId: string, text: string) {
 }
 
 export async function stopAgoraAgent(agentId: string) {
+  agentContexts.delete(agentId);
   const response = await fetch(
     `${config.agora.convoAiBaseUrl}/${config.agora.appId}/agents/${encodeURIComponent(agentId)}/leave`,
     {

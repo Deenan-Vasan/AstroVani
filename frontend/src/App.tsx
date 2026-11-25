@@ -10,6 +10,13 @@ import { PalmScene, type PalmLineId } from './scenes/PalmScene';
 import { CosmicThreadScene } from './scenes/CosmicThreadScene';
 import { useAgoraSession, type AgentActivityState, type TranscriptEvent, type UiSignal } from './hooks/useAgoraSession';
 import type { BirthProfile, ChartData, PalmResult, SceneName } from './types';
+import {
+  birthSkyIntro, cosmicThreadIntro, detectScriptLanguage, isLocalizedNextSectionRequest, kundliIntro, localizedChapterRequest,
+  isLocalizedGuidanceRequest, localizedGuidanceKind, mentionsLocalizedKundliSubject,
+  localizedPlanetMentions, nextLanguage, palmLineFallback, palmLineFromLocalizedText, palmOpening, palmRetakeMessage,
+  palmistryIntro, sceneFromLocalizedTransition, stripQuotedText, transitionSentence,
+  type LangCode
+} from './lib/language';
 
 /*
  * ERROR-PATH PLACEHOLDER ONLY.
@@ -43,13 +50,21 @@ const planetNames = ['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn','R
  * start of the conversational turn. The agent's planet/highlight publish_message remains
  * authoritative reinforcement once it arrives.
  */
+function normalizeForEcho(text: string) {
+  return text.toLowerCase().replace(/[\s.,!?;:।'"“”‘’-]+/g, '');
+}
+
 function planetFromUserText(text: string) {
   const normalized = text.toLowerCase();
   const candidates = planetNames
     .map(name => ({ name, index: normalized.search(new RegExp(`\\b${name.toLowerCase()}\\b`, 'i')) }))
     .filter(item => item.index >= 0)
     .sort((a, b) => a.index - b.index);
-  if (!candidates.length) return undefined;
+  if (!candidates.length) {
+    // Hindi / Tamil names ("गुरु", "சனி"): a single distinct planet is a direct request.
+    // "ராகு-கேது" / "राहु और केतु": the first planet named leads the panel.
+    return localizedPlanetMentions(text)[0]?.planet;
+  }
 
   // Prefer explicit conversational requests. This avoids treating a comparison/list
   // such as "Sun and Jupiter" as a forced switch unless the user is actually asking
@@ -97,10 +112,13 @@ function topicFromGuidanceRequest(text: string) {
 }
 
 function isDirectKundliGuidanceRequest(text: string) {
-  return /\b(traditional\s+guidance|guidance|remed(?:y|ies)|pooja|puja|mantra|gemstone|practice)\b/i.test(text);
+  return /\b(traditional\s+guidance|guidance|remed(?:y|ies)|pooja|puja|mantra|gemstone|practice)\b/i.test(text)
+    || isLocalizedGuidanceRequest(text);
 }
 
 function requestedGuidanceKind(text: string): KundliGuidance['activeKind'] | undefined {
+  const localizedKind = localizedGuidanceKind(text);
+  if (localizedKind) return localizedKind;
   if (/\b(pooja|puja|temple|worship|ritual)\b/i.test(text)) return 'puja';
   if (/\bmantra\b/i.test(text)) return 'mantra';
   if (/\b(gemstone|coral|sapphire|emerald|diamond|ruby|pearl|hessonite|cat(?:'s)? eye)\b/i.test(text)) return 'gemstone';
@@ -158,7 +176,8 @@ function planetFromAgentText(text: string) {
     .map(name => ({ name, index: opening.search(new RegExp(`\\b${name}\\b`, 'i')) }))
     .filter(item => item.index >= 0)
     .sort((a, b) => a.index - b.index);
-  return mentions[0]?.name;
+  // Hindi / Tamil replies name planets in their own script.
+  return mentions[0]?.name ?? localizedPlanetMentions(opening.slice(0, 160))[0]?.planet;
 }
 
 
@@ -535,18 +554,12 @@ function palmLineFromAgentText(text: string): PalmLineId | undefined {
   for (const line of palmLineNames) {
     if (line.patterns.some(pattern => pattern.test(opening))) return line.id;
   }
-  return undefined;
+  return palmLineFromLocalizedText(text);
 }
 
-function buildPalmLineFallback(result: PalmResult | null, lineId: PalmLineId) {
-  const label = lineId.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+function buildPalmLineFallback(result: PalmResult | null, lineId: PalmLineId, lang: LangCode) {
   const line = result?.lines.find(item => item.id === lineId);
-  if (!line) return `Let us focus on your ${label}. I do not have a clear captured reading for that line yet, so please retake the palm image in brighter, even lighting if you would like a more grounded interpretation.`;
-  if (line.status === 'not_clear' || line.status === 'estimated') {
-    return `Let us focus on your ${line.name}. This guide is placed from typical palm anatomy because the crease was not clear enough in the captured image. I should not make a confident reading from it. You can retake the image with your palm flat, close and evenly lit.`;
-  }
-  const morphology = line.observation && line.observation !== 'indeterminate' ? ` It appears ${line.observation}.` : '';
-  return `Let us focus on your ${line.name}. ${line.traditionalReading}${morphology} This is a traditional palmistry-style interpretation, not a medical or scientific assessment.`;
+  return palmLineFallback(line, lineId, line?.status, lang);
 }
 
 function sceneFromAgentText(text: string): SceneName | undefined {
@@ -560,10 +573,13 @@ function sceneFromAgentText(text: string): SceneName | undefined {
     { scene: 'thread', patterns: [/\bthe cosmic thread is opening now\b/i] },
     { scene: 'intro', patterns: [/\breturning to arrival now\b/i] }
   ];
+  // A phrase the agent merely quotes ("I can say, 'Palmistry is opening now.'") is not a command.
+  const spoken = stripQuotedText(text);
   for (const rule of rules) {
-    if (rule.patterns.some(pattern => pattern.test(text))) return rule.scene;
+    if (rule.patterns.some(pattern => pattern.test(spoken))) return rule.scene;
   }
-  return undefined;
+  // Hindi and Tamil transition sentences (see lib/language.ts and the agent prompt).
+  return sceneFromLocalizedTransition(spoken);
 }
 
 function nextSceneFromJourney(scene: SceneName): SceneName | undefined {
@@ -590,7 +606,10 @@ function introducesNewKundliSubject(text: string) {
   return /\b(sun|moon|mars|mercury|jupiter|venus|saturn|rahu|ketu|surya|chandra|mangal|budh|guru|brihaspati|shukra|shani)\b/i.test(text)
     || /\b(lagna|ascendant|dasha|nakshatra|house|rashi|chart|kundli)\b/i.test(text)
     || /\b(dosha|dosh|manglik|kaal\s*sarp|pitru|pitra|guru\s+chandal|sade\s+sati|grahan|nadi)\b/i.test(text)
-    || /\b(traditional\s+guidance|guidance|remed(?:y|ies)|pooja|puja|mantra|gemstone|practice|fast(?:ing)?|donat(?:e|ion)|charity|seva|temple|ritual)\b/i.test(text);
+    || /\b(traditional\s+guidance|guidance|remed(?:y|ies)|pooja|puja|mantra|gemstone|practice|fast(?:ing)?|donat(?:e|ion)|charity|seva|temple|ritual)\b/i.test(text)
+    || localizedPlanetMentions(text).length > 0
+    || isLocalizedGuidanceRequest(text)
+    || mentionsLocalizedKundliSubject(text);
 }
 
 /**
@@ -628,13 +647,18 @@ function isNextSectionRequest(text: string) {
   // Only explicit "next section/chapter" language advances the journey. Bare words
   // like "continue" or "proceed" are common conversational requests and must not
   // navigate away from the current astrology section.
-  return /\b(?:move|go|continue|proceed|advance)?\s*(?:to\s+)?(?:the\s+)?next\s+(?:section|chapter)\b/i.test(text)
+  return isLocalizedNextSectionRequest(text)
+    || /\b(?:move|go|continue|proceed|advance)?\s*(?:to\s+)?(?:the\s+)?next\s+(?:section|chapter)\b/i.test(text)
     || /\b(?:move\s+on|go\s+ahead|proceed)\s+(?:to\s+)?(?:the\s+)?next\s+(?:section|chapter)\b/i.test(text);
 }
 
 function sceneFromUserNavigation(text: string, current: SceneName): SceneName | undefined {
   const normalized = text.trim();
   if (isNextSectionRequest(normalized)) return nextSceneFromJourney(current);
+
+  // Hindi / Tamil: an explicit open/show/go verb plus a chapter name.
+  const localizedScene = localizedChapterRequest(normalized);
+  if (localizedScene) return localizedScene;
 
   // Chapter navigation must be EXPLICIT. A previous version allowed a polite phrase
   // such as "I want..." to satisfy the navigation gate, and the generic Arrival alias
@@ -658,15 +682,9 @@ function sceneFromUserNavigation(text: string, current: SceneName): SceneName | 
   return rules.find(rule => rule.pattern.test(normalized))?.scene;
 }
 
-function chapterTransitionSentence(scene: SceneName) {
-  const sentences: Record<SceneName, string> = {
-    intro: 'Returning to Arrival now.',
-    sky: 'The Birth Sky is opening now.',
-    kundli: 'Your Kundli is opening now.',
-    palm: 'Palmistry is opening now.',
-    thread: 'The Cosmic Thread is opening now.'
-  };
-  return sentences[scene];
+/** The sentence that opens a chapter, in the conversation language (recognised by sceneFromAgentText). */
+function chapterTransitionSentence(scene: SceneName, lang: LangCode = 'en') {
+  return transitionSentence(scene, lang);
 }
 
 /** "3" -> "3rd". Spoken intros read better with an ordinal than a bare number. */
@@ -724,6 +742,7 @@ export default function App() {
   const threadIntroSpokenRef = useRef(false);
   const pendingChapterSignalRef = useRef<SceneName | null>(null);
   const birthSkyAutoIntroTimerRef = useRef<number | undefined>(undefined);
+  const agentActivityRef = useRef<AgentActivityState>('unknown');
   const kundliAutoIntroTimerRef = useRef<number | undefined>(undefined);
   const palmAutoIntroTimerRef = useRef<number | undefined>(undefined);
   const threadAutoIntroTimerRef = useRef<number | undefined>(undefined);
@@ -762,6 +781,20 @@ export default function App() {
   // without this it would re-apply the PREVIOUS answer's planet immediately after a new
   // user question had deliberately cleared it.
   const lastUserTurnIndexRef = useRef(-1);
+  // Conversation language, inferred from the script of what the user says. It only selects
+  // the wording of the application's own scripted lines; the agent replies in the user's
+  // language by itself (see the system prompt).
+  const languageRef = useRef<LangCode>('en');
+  // Latest chart and speak function for timers that must survive re-renders.
+  const introChartRef = useRef<ChartData | undefined>(undefined);
+  const introSpeakRef = useRef<((text: string, options?: { interruptable?: boolean }) => Promise<unknown>) | undefined>(undefined);
+  // What the user has said since the agent last finished a reply, and whether the agent's
+  // answer to it has already been checked for being in the right language.
+  const recentUserTextsRef = useRef<string[]>([]);
+  // The agent's own most recent words (normalised), used to recognise them when Agora hands
+  // them back as user speech.
+  const recentAgentTextRef = useRef('');
+  const replyLanguageCheckedRef = useRef(true);
   // Timers that walk the planet highlight through a multi-planet answer in time with the
   // spoken audio. Cleared on any new turn or interruption.
   const pacedHighlightTimersRef = useRef<number[]>([]);
@@ -907,8 +940,54 @@ export default function App() {
     setScene(nextScene);
   }, [clearPacedHighlights]);
 
+  /**
+   * Work out the conversation language from what the user said and tell the agent.
+   *
+   * Called on the user's IN-PROGRESS words (replay=false) so the agent is told while the user
+   * is still speaking, before it begins its reply: no wrong-language start, no pause. The
+   * final transcript calls it again as a fallback (replay=true); that only re-asks the
+   * sentence if the language was NOT already caught early and the user moved to English.
+   */
+  const applyUserLanguage = useCallback((text: string, replay: boolean) => {
+    const previousLanguage = languageRef.current;
+    const next = nextLanguage(previousLanguage, text);
+    if (next === previousLanguage) return;
+    languageRef.current = next;
+    if (!agentIdRef.current) return;
+    const replayText = replay && next === 'en' ? text : undefined;
+    console.log(`[AstroVani] Conversation language ${previousLanguage} -> ${next}; informing agent${replayText ? ' and replaying the turn' : replay ? '' : ' (early, while the user is speaking)'}.`);
+    void agora.switchLanguage(next, replayText).catch(error => {
+      console.warn('[AstroVani] Failed to update agent language', error);
+    });
+  }, []);
+
+  const handleUserPartial = useCallback((event: TranscriptEvent) => {
+    // Real in-progress speech arrives while the agent is listening or silent. A "user" packet
+    // while the agent is thinking ('unknown') or talking is the agent's own words handed back
+    // (echo), so it must neither switch the language nor cancel the Birth Sky introduction.
+    if (agentActivityRef.current !== 'listening' && agentActivityRef.current !== 'silent') return;
+    // Echo of the agent's own sentence (any fragment of it): not the user speaking. Without
+    // this, a piece of the Tamil closing line cancelled the Birth Sky introduction.
+    const heard = normalizeForEcho(event.text);
+    if (heard.length >= 8 && recentAgentTextRef.current.includes(heard.slice(0, 24))) return;
+    applyUserLanguage(event.text, false);
+    if (event.text.trim().length >= 3) {
+      // The user has started speaking. Do not let the scripted Birth Sky introduction start
+      // over their question (it used to fire mid-sentence and replay the whole intro instead
+      // of answering). The final transcript used to be the only thing that cancelled it.
+      birthSkyAutoIntroCancelledRef.current = true;
+      if (birthSkyAutoIntroTimerRef.current) {
+        window.clearTimeout(birthSkyAutoIntroTimerRef.current);
+        birthSkyAutoIntroTimerRef.current = undefined;
+      }
+    }
+  }, [applyUserLanguage]);
+
   const handleTranscriptEvent = useCallback(async (event: TranscriptEvent) => {
     if (event.speaker === 'user') {
+      applyUserLanguage(event.text, true);
+      recentUserTextsRef.current = [...recentUserTextsRef.current, event.text].slice(-4);
+      replyLanguageCheckedRef.current = false;
       // `emit()` appends to transcriptRef before invoking this callback, so the user's
       // line is already the last entry.
       lastUserTurnIndexRef.current = transcriptRef.current.length - 1;
@@ -918,6 +997,8 @@ export default function App() {
       clearPacedHighlights();
     }
     if (event.speaker === 'agent') {
+      recentUserTextsRef.current = [];
+      replyLanguageCheckedRef.current = true;
       palmLineFallbackRequestRef.current = null;
       if (palmLineFallbackTimerRef.current) {
         window.clearTimeout(palmLineFallbackTimerRef.current);
@@ -1113,7 +1194,7 @@ export default function App() {
         const topic = requestedTopic;
         const kind = requestedGuidanceKind(event.text) ?? kundliGuidanceRef.current?.activeKind ?? 'puja';
         const requestedPlanet = planetFromUserText(event.text);
-        const planet = requestedPlanet ?? (topic === 'General' ? kundliGuidanceRef.current?.planet : undefined) ?? 'General';
+        const planet = requestedPlanet ?? (topic === 'General' ? (kundliGuidanceRef.current?.planet ?? spokenPlanetsRef.current[0]) : undefined) ?? 'General';
         pendingGuidanceUserIntentRef.current = { kind, at: Date.now() };
         lastGuidanceUiSignalAtRef.current = Date.now();
         if (requestedPlanet) {
@@ -1203,7 +1284,7 @@ export default function App() {
           if (!speak) return;
           palmLineFallbackRequestRef.current = null;
           console.warn('[AstroVani] Palm line request produced no spoken response; using grounded /speak fallback:', requestedLine);
-          void speak(buildPalmLineFallback(palmResultRef.current, requestedLine), { interruptable: true }).catch(error => {
+          void speak(buildPalmLineFallback(palmResultRef.current, requestedLine, languageRef.current), { interruptable: true }).catch(error => {
             console.warn('[AstroVani] Palm line fallback speech failed.', error);
           });
         }, 2600);
@@ -1240,7 +1321,7 @@ export default function App() {
           const speak = agentSpeakRef.current;
           if (!speak) return;
           console.warn('[AstroVani] Chapter request produced no completed transition; using /speak fallback:', requested);
-          void speak(chapterTransitionSentence(requested), { interruptable: true }).catch(error => {
+          void speak(chapterTransitionSentence(requested, languageRef.current), { interruptable: true }).catch(error => {
             console.warn('[AstroVani] Chapter transition fallback speech failed.', error);
           });
 
@@ -1419,6 +1500,25 @@ export default function App() {
 
   const handleAgentTranscriptProgress = useCallback((event: TranscriptEvent) => {
     if (event.speaker !== 'agent') return;
+    if (event.text.trim()) {
+      recentAgentTextRef.current = (recentAgentTextRef.current + ' ' + normalizeForEcho(event.text)).slice(-1200);
+    }
+
+    // Safety net: the language update can reach the agent after it has already started
+    // answering (and a bare "2020." gives it no language clue, so it follows the earlier
+    // Tamil/Hindi history). If the user is in English but the reply starts in another script,
+    // stop it and have the agent answer what the user said again, in English.
+    if (!replyLanguageCheckedRef.current && event.text.trim()) {
+      replyLanguageCheckedRef.current = true;
+      const script = detectScriptLanguage(event.text);
+      const userText = recentUserTextsRef.current.join(' ').trim();
+      if (languageRef.current === 'en' && script && script !== 'latin' && script !== 'en' && userText && agentIdRef.current) {
+        console.warn(`[AstroVani] Agent began replying in ${script} while the user is speaking English; re-asking in English.`);
+        void agora.switchLanguage('en', userText).catch(error => {
+          console.warn('[AstroVani] English re-ask failed', error);
+        });
+      }
+    }
 
     // The normal turn has started. Cancel the silence watchdog before doing any visual
     // parsing so a slow, streaming answer is never duplicated by /speak.
@@ -1499,6 +1599,7 @@ export default function App() {
   }, [scene]);
 
   const handleAgentState = useCallback((activity: AgentActivityState) => {
+    agentActivityRef.current = activity;
     // Keep agent-state diagnostics, but do not use generic `silent` as the primary
     // transition trigger. In some ConvoAI builds it can arrive before the final
     // assistant transcription for the same turn. The completed transition sentence
@@ -1508,7 +1609,7 @@ export default function App() {
     }
   }, [scene]);
 
-  const agora = useAgoraSession(appendTranscript, handleTranscriptEvent, handleUiSignal, handleAgentState, handleAgentTranscriptProgress);
+  const agora = useAgoraSession(appendTranscript, handleTranscriptEvent, handleUiSignal, handleAgentState, handleAgentTranscriptProgress, handleUserPartial);
 
   useEffect(() => {
     agentSpeakRef.current = agora.speak;
@@ -1529,6 +1630,8 @@ export default function App() {
     if (threadAutoIntroTimerRef.current) window.clearTimeout(threadAutoIntroTimerRef.current);
   }, []);
 
+  introChartRef.current = chart;
+  introSpeakRef.current = agora.speak as typeof introSpeakRef.current;
   useEffect(() => {
     if (scene !== 'sky' || birthSkyIntroSpokenRef.current || birthSkyAutoIntroCancelledRef.current || agora.state !== 'connected') return;
 
@@ -1547,13 +1650,13 @@ export default function App() {
 
       birthSkyIntroSpokenRef.current = true;
       // Spoken from the ACTIVE chart so Jyotishi and the visual always agree.
-      const sun = chart.planets.find(p => p.name === 'Sun');
-      const sunPlacement = sun
-        ? `The Sun is in ${sun.sign} in your ${ordinal(sun.house)} house at ${spokenDegree(sun.degree)}.`
-        : 'The Sun opens your birth sky.';
-      const intro = `The Birth Sky is now open. Let us begin with the Sun. ${sunPlacement} This placement traditionally emphasizes self-expression, communication, learning, and the confidence to share your ideas. You can interrupt me at any time or ask about another planet.`;
+      // Read the chart and speak function at fire time. Re-renders (transcript packets,
+      // the chart refresh while the sky opens) used to clear this timer before it fired.
+      const liveChart = introChartRef.current ?? chart;
+      const sun = liveChart.planets.find(p => p.name === 'Sun');
+      const intro = birthSkyIntro(sun ? { sign: sun.sign, house: sun.house, degree: sun.degree } : undefined, languageRef.current);
       console.log('[AstroVani] Starting automatic Birth Sky introduction.');
-      void agora.speak(intro, { interruptable: true });
+      void introSpeakRef.current?.(intro, { interruptable: true });
     }, 650);
 
     return () => {
@@ -1562,7 +1665,7 @@ export default function App() {
         birthSkyAutoIntroTimerRef.current = undefined;
       }
     };
-  }, [agora, scene, chart]);
+  }, [agora.state, scene]);
 
   useEffect(() => {
     if (scene !== 'kundli' || kundliIntroSpokenRef.current || agora.state !== 'connected') return;
@@ -1578,9 +1681,7 @@ export default function App() {
       if (!speak) return;
 
       kundliIntroSpokenRef.current = true;
-      const dashaLords = chart.dasha.split('/').map(part => part.trim()).filter(Boolean);
-      const spokenDasha = dashaLords.length > 1 ? `${dashaLords[0]} and ${dashaLords[1]}` : (dashaLords[0] || 'not yet determined');
-      const intro = `Your Kundli is now open. The same nine Navagraha placements are translated into this Vedic chart. Your Lagna is ${chart.lagna}, your Moon sign is ${chart.moonSign}, and your current illustrative Dasha is ${spokenDasha}. We can explore a planet, house, Dasha, Dosha, gemstone, mantra, puja, or traditional guidance. Would you like me to begin with your Lagna, Moon sign, current Dasha, or a specific planet?`;
+      const intro = kundliIntro({ lagna: chart.lagna, moonSign: chart.moonSign, dasha: chart.dasha }, languageRef.current);
       console.log('[AstroVani] Starting automatic Kundli introduction.');
       void speak(intro, { interruptable: true }).catch((error) => {
         kundliIntroSpokenRef.current = false;
@@ -1606,7 +1707,7 @@ export default function App() {
       if (!speak) return;
 
       palmIntroSpokenRef.current = true;
-      const intro = 'Palmistry is now open. Please open the Palm Camera, place one open palm inside the guide, and capture your palm when it is centered, upright, and steady. After the capture, I can guide you through the Heart line, Head line, Life line, and Fate line step by step.';
+      const intro = palmistryIntro(languageRef.current);
       console.log('[AstroVani] Starting automatic Palmistry introduction.');
       void speak(intro, { interruptable: true }).catch((error) => {
         palmIntroSpokenRef.current = false;
@@ -1631,7 +1732,7 @@ export default function App() {
       if (!speak) return;
       threadIntroSpokenRef.current = true;
       console.log('[AstroVani] Starting automatic Cosmic Thread introduction.');
-      const intro = 'The Cosmic Thread is now open. This timeline connects your calculated chart themes and planetary periods into one guided journey. Ask me about the current phase, an upcoming period, or a life theme you want to explore.';
+      const intro = cosmicThreadIntro(languageRef.current);
       void speak(intro, { interruptable: true }).catch(error => {
         threadIntroSpokenRef.current = false;
         console.warn('[AstroVani] Automatic Cosmic Thread introduction failed; will retry while the chapter remains open.', error);
@@ -1773,10 +1874,12 @@ export default function App() {
       (line.status === 'detected' || line.status === 'approximate') && line.confidence >= 0.45
     );
     const first = readable[0];
+    // Speak in the language the conversation is in, not always English.
+    const lang = languageRef.current;
     if (!first) {
       setSpokenPalmLine(undefined);
       try {
-        await agora.speak('I can see your palm, but the major lines are not clear enough for a reliable guided reading yet. Please retake it with your palm flat, close to the camera, and evenly lit.', { interruptable: true });
+        await agora.speak(palmRetakeMessage(lang), { interruptable: true });
       } catch (error) {
         console.error('[AstroVani] Failed to start palm retake guidance', error);
       }
@@ -1784,14 +1887,8 @@ export default function App() {
     }
 
     setSpokenPalmLine(first.id);
-    const describe = (line: PalmResult['lines'][number]) => {
-      const morphology = line.observation && line.observation !== 'indeterminate'
-        ? ` It appears ${line.observation}.`
-        : '';
-      return `${line.name}: ${line.traditionalReading}${morphology}`;
-    };
     const second = readable.find(line => line.id !== first.id);
-    const opening = `I can see your major palm lines now. Let me begin with your ${first.name}. ${describe(first)}${second ? ` After that, we can look at your ${second.name}.` : ''}`;
+    const opening = palmOpening(first, second, lang);
     try {
       await agora.speak(opening, { interruptable: true });
     } catch (error) {
@@ -1826,12 +1923,6 @@ export default function App() {
     await agora.start();
   }
 
-  async function startTyped(birthProfile: BirthProfile) {
-    profileCompletedRef.current = false;
-    await agora.start(birthProfile);
-    await completeProfile(birthProfile, 'typed');
-  }
-
   return (
     <div className="app-shell">
       <TopBar scene={scene} connectionState={agora.state} />
@@ -1840,7 +1931,6 @@ export default function App() {
         <section className="stage">
           {scene === 'intro' && <BirthForm
             onStartVoice={startVoice}
-            onStartTyped={startTyped}
             loading={loading}
             connecting={agora.state === 'connecting'}
             live={agora.state === 'connected'}

@@ -23,6 +23,29 @@ function numberEnv(name: string, fallback: number, allowZero = false) {
   return value > 0 ? value : fallback;
 }
 
+/** Default recognition languages: Indian English plus the Indian languages the product targets. */
+const DEFAULT_ASR_LANGUAGE = 'en-IN,ta-IN,hi-IN,te-IN,mr-IN,kn-IN';
+
+/** AGORA_ASR_LANGUAGE as a clean comma-separated BCP-47 string (no spaces, no empties, no duplicates). */
+function asrLanguageEnv() {
+  const tags = (process.env.AGORA_ASR_LANGUAGE || DEFAULT_ASR_LANGUAGE).split(',').map(v => v.trim()).filter(Boolean);
+  return [...new Set(tags.length ? tags : DEFAULT_ASR_LANGUAGE.split(','))].join(',');
+}
+
+/** Extra, non-secret Murf parameters as a JSON object (AGORA passes unlisted params through to Murf). */
+function jsonObjectEnv(name: string): Record<string, unknown> {
+  const raw = (process.env[name] || '').trim();
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+    console.warn(`[config] ${name} must be a JSON object; ignoring it.`);
+  } catch {
+    console.warn(`[config] ${name} is not valid JSON; ignoring it.`);
+  }
+  return {};
+}
+
 function listEnv(name: string) {
   return (process.env[name] || '').split(',').map(v => v.trim().replace(/\/+$/, '')).filter(Boolean);
 }
@@ -54,7 +77,10 @@ export const config = {
     avatarUid: numberEnv('AGORA_AVATAR_UID', 10001),
     avatarToken: (process.env.AGORA_AVATAR_TOKEN || '').trim(),
     agentIdleTimeoutSeconds: numberEnv('AGORA_AGENT_IDLE_TIMEOUT_SECONDS', 120),
-    asrLanguageHints: (process.env.AGORA_ASR_LANGUAGE_HINTS || 'en,hi,ta,te,mr,kn').split(',').map(v => v.trim()).filter(Boolean),
+    // ARES takes ONE comma-separated string of BCP-47 tags in asr.language (required; it
+    // otherwise falls back to en-US, which is why Tamil speech went unrecognised). More than one
+    // language makes ARES recognise them together with no explicit switching.
+    asrLanguage: asrLanguageEnv(),
     greeting: process.env.AGORA_AGENT_GREETING || 'Namaste. Welcome to AstroVani, The Cosmic Journey. Together we can explore your birth sky, Kundli, palm, and life timeline through a live visual journey. To begin, tell me your name in any language.',
     greetingInterruptible: boolEnv('AGORA_GREETING_INTERRUPTIBLE', false),
     forceGreetingViaSpeak: boolEnv('AGORA_FORCE_GREETING_VIA_SPEAK', false),
@@ -82,6 +108,8 @@ export const config = {
     rate: numberEnv('MURF_RATE', 0, true),
     pitch: numberEnv('MURF_PITCH', 0, true),
     model: (process.env.MURF_MODEL || 'FALCON').trim(),
-    sampleRate: numberEnv('MURF_SAMPLE_RATE', 24000)
+    sampleRate: numberEnv('MURF_SAMPLE_RATE', 24000),
+    // Optional extra Murf parameters, e.g. a multilingual-voice option. Never overrides the standard fields.
+    extraParams: jsonObjectEnv('MURF_EXTRA_PARAMS_JSON')
   }
 };

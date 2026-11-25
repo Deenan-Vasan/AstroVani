@@ -7,7 +7,8 @@ import AgoraRTC, {
   type UID
 } from 'agora-rtc-sdk-ng';
 import type { BirthProfile } from '../types';
-import { createAgoraRtcSession, speakAgoraAgent, startAgoraAgent, stopAgoraAgent, thinkAgoraAgent } from '../api';
+import { isScriptedAgentPhrase } from '../lib/language';
+import { createAgoraRtcSession, speakAgoraAgent, startAgoraAgent, stopAgoraAgent, thinkAgoraAgent, updateAgentLanguage } from '../api';
 
 export type AgoraConnectionState = 'idle' | 'connecting' | 'connected' | 'error';
 export type TranscriptEvent = { speaker: 'user' | 'agent' | 'system'; text: string };
@@ -35,19 +36,22 @@ export function useAgoraSession(
   onTranscriptEvent?: (event: TranscriptEvent) => void,
   onUiSignal?: (signal: UiSignal) => void,
   onAgentState?: (state: AgentActivityState) => void,
-  onTranscriptProgress?: (event: TranscriptEvent) => void
+  onTranscriptProgress?: (event: TranscriptEvent) => void,
+  onUserPartial?: (event: TranscriptEvent) => void
 ) {
   const onTranscriptRef = useRef(onTranscript);
   const onTranscriptEventRef = useRef(onTranscriptEvent);
   const onUiSignalRef = useRef(onUiSignal);
   const onAgentStateRef = useRef(onAgentState);
   const onTranscriptProgressRef = useRef(onTranscriptProgress);
+  const onUserPartialRef = useRef(onUserPartial);
 
   useEffect(() => { onTranscriptRef.current = onTranscript; }, [onTranscript]);
   useEffect(() => { onTranscriptEventRef.current = onTranscriptEvent; }, [onTranscriptEvent]);
   useEffect(() => { onUiSignalRef.current = onUiSignal; }, [onUiSignal]);
   useEffect(() => { onAgentStateRef.current = onAgentState; }, [onAgentState]);
   useEffect(() => { onTranscriptProgressRef.current = onTranscriptProgress; }, [onTranscriptProgress]);
+  useEffect(() => { onUserPartialRef.current = onUserPartial; }, [onUserPartial]);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const micRef = useRef<IMicrophoneAudioTrack | null>(null);
@@ -116,6 +120,11 @@ export function useAgoraSession(
     pendingTurnsRef.current.delete(key);
     let normalized = pending.text.trim();
     if (!normalized) return;
+
+    if (pending.speaker === 'user' && isScriptedAgentPhrase(normalized)) {
+      console.debug('[ConvoAI] Suppressed scripted agent phrase reported as user transcription:', normalized);
+      return;
+    }
 
     if (pending.speaker === 'user' && shouldSuppressUserEcho(
       normalized,
@@ -237,6 +246,12 @@ export function useAgoraSession(
         onTranscriptProgressRef.current?.({ speaker: 'agent', text: transcriptText });
       }
 
+      if (speaker === 'user' && !isScriptedAgentPhrase(transcriptText)) {
+        // The user's words arrive progressively while they are still speaking. Expose them
+        // early (never rendered) so the app can react before the agent starts its reply.
+        onUserPartialRef.current?.({ speaker: 'user', text: transcriptText });
+      }
+
       queueTranscript(message, speaker, transcriptText);
       return;
     } catch {
@@ -310,6 +325,21 @@ export function useAgoraSession(
     emit({ speaker: 'user', text: normalized });
     await thinkAgoraAgent(id, normalized);
   }, [emit]);
+
+  /**
+   * Tell the agent the user's language changed. With `replayText` the agent also re-answers
+   * that utterance after the update: the update arrives after the agent has already started
+   * answering the turn in the OLD language, so without a replay the first reply after a
+   * switch is always in the wrong language.
+   */
+  const switchLanguage = useCallback(async (language: string, replayText?: string) => {
+    const id = agentIdRef.current;
+    if (!id) return;
+    const text = replayText?.trim();
+    // Seed dedupe so a provider echo of the replayed input cannot create a second chat bubble.
+    if (text) isDuplicateTranscript(transcriptSeenRef.current, `text:user:${text}`, 30000);
+    await updateAgentLanguage(id, language, text);
+  }, []);
 
   const stop = useCallback(async () => {
     const agentId = agentIdRef.current;
@@ -424,7 +454,7 @@ export function useAgoraSession(
   return {
     state, error, channel, uid, micEnabled, cameraEnabled,
     localVideoTrack, remoteVideoTrack, remoteVideoUid, agentId,
-    start, stop, speak, ask, toggleMic, toggleCamera
+    start, stop, speak, ask, switchLanguage, toggleMic, toggleCamera
   };
 }
 
