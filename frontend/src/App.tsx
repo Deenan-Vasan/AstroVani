@@ -785,6 +785,9 @@ export default function App() {
   // the wording of the application's own scripted lines; the agent replies in the user's
   // language by itself (see the system prompt).
   const languageRef = useRef<LangCode>('en');
+  // Latest chart and speak function for timers that must survive re-renders.
+  const introChartRef = useRef<ChartData | undefined>(undefined);
+  const introSpeakRef = useRef<((text: string, options?: { interruptable?: boolean }) => Promise<unknown>) | undefined>(undefined);
   // What the user has said since the agent last finished a reply, and whether the agent's
   // answer to it has already been checked for being in the right language.
   const recentUserTextsRef = useRef<string[]>([]);
@@ -1627,6 +1630,8 @@ export default function App() {
     if (threadAutoIntroTimerRef.current) window.clearTimeout(threadAutoIntroTimerRef.current);
   }, []);
 
+  introChartRef.current = chart;
+  introSpeakRef.current = agora.speak as typeof introSpeakRef.current;
   useEffect(() => {
     if (scene !== 'sky' || birthSkyIntroSpokenRef.current || birthSkyAutoIntroCancelledRef.current || agora.state !== 'connected') return;
 
@@ -1645,10 +1650,13 @@ export default function App() {
 
       birthSkyIntroSpokenRef.current = true;
       // Spoken from the ACTIVE chart so Jyotishi and the visual always agree.
-      const sun = chart.planets.find(p => p.name === 'Sun');
+      // Read the chart and speak function at fire time. Re-renders (transcript packets,
+      // the chart refresh while the sky opens) used to clear this timer before it fired.
+      const liveChart = introChartRef.current ?? chart;
+      const sun = liveChart.planets.find(p => p.name === 'Sun');
       const intro = birthSkyIntro(sun ? { sign: sun.sign, house: sun.house, degree: sun.degree } : undefined, languageRef.current);
       console.log('[AstroVani] Starting automatic Birth Sky introduction.');
-      void agora.speak(intro, { interruptable: true });
+      void introSpeakRef.current?.(intro, { interruptable: true });
     }, 650);
 
     return () => {
@@ -1657,7 +1665,7 @@ export default function App() {
         birthSkyAutoIntroTimerRef.current = undefined;
       }
     };
-  }, [agora, scene, chart]);
+  }, [agora.state, scene]);
 
   useEffect(() => {
     if (scene !== 'kundli' || kundliIntroSpokenRef.current || agora.state !== 'connected') return;
