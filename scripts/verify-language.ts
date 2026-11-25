@@ -188,5 +188,8 @@ check('Tamil education is not a gemstone', !isLocalizedGuidanceRequest('கல�
 check('Tamil/Hindi subjects recognised', mentionsLocalizedKundliSubject('என் லக்னம் என்ன') && mentionsLocalizedKundliSubject('मेरी दशा क्या है'));
 check('plain chatter is not a subject', !mentionsLocalizedKundliSubject('சரி, நன்றி') && !isLocalizedGuidanceRequest('ठीक है धन्यवाद'));
 
+check('Tamil/Hindi Birth Sky lead-ins count as scripted agent phrases', isScriptedAgentPhrase('நன்றி. எனக்குத் தேவையான அனைத்தும் கிடைத்துவிட்டன.') && isScriptedAgentPhrase('धन्यवाद। मुझे जो चाहिए था सब मिल गया।'));
+check('Tamil Birth Sky lead-in plus transition opens the sky', sceneFromLocalizedTransition('நன்றி. எனக்குத் தேவையான அனைத்தும் கிடைத்துவிட்டன. பிறப்பு வானம் இப்போது திறக்கிறது.') === 'sky');
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll language checks passed');
 process.exit(failures ? 1 : 0);

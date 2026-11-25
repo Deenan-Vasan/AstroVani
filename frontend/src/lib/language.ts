@@ -557,5 +557,6 @@ export function isScriptedAgentPhrase(text: string): boolean {
   return /\b(?:the birth sky|your kundli|kundli|palmistry|the cosmic thread) is opening now\b/i.test(text)
     || /\breturning to arrival now\b/i.test(text)
     || /\bi have everything i need\b/i.test(text)
+    || /(?:எனக்குத் தேவையான அனைத்தும் கிடைத்துவிட்டன|मुझे जो चाहिए था सब मिल गया)/u.test(text)
     || sceneFromLocalizedTransition(text) !== undefined;
 }
