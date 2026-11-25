@@ -35,19 +35,22 @@ export function useAgoraSession(
   onTranscriptEvent?: (event: TranscriptEvent) => void,
   onUiSignal?: (signal: UiSignal) => void,
   onAgentState?: (state: AgentActivityState) => void,
-  onTranscriptProgress?: (event: TranscriptEvent) => void
+  onTranscriptProgress?: (event: TranscriptEvent) => void,
+  onUserPartial?: (event: TranscriptEvent) => void
 ) {
   const onTranscriptRef = useRef(onTranscript);
   const onTranscriptEventRef = useRef(onTranscriptEvent);
   const onUiSignalRef = useRef(onUiSignal);
   const onAgentStateRef = useRef(onAgentState);
   const onTranscriptProgressRef = useRef(onTranscriptProgress);
+  const onUserPartialRef = useRef(onUserPartial);
 
   useEffect(() => { onTranscriptRef.current = onTranscript; }, [onTranscript]);
   useEffect(() => { onTranscriptEventRef.current = onTranscriptEvent; }, [onTranscriptEvent]);
   useEffect(() => { onUiSignalRef.current = onUiSignal; }, [onUiSignal]);
   useEffect(() => { onAgentStateRef.current = onAgentState; }, [onAgentState]);
   useEffect(() => { onTranscriptProgressRef.current = onTranscriptProgress; }, [onTranscriptProgress]);
+  useEffect(() => { onUserPartialRef.current = onUserPartial; }, [onUserPartial]);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const micRef = useRef<IMicrophoneAudioTrack | null>(null);
@@ -235,6 +238,12 @@ export function useAgoraSession(
         // Expose the in-progress assistant transcription only to visual state.
         // Visible transcript history still waits for the final packet below.
         onTranscriptProgressRef.current?.({ speaker: 'agent', text: transcriptText });
+      }
+
+      if (speaker === 'user') {
+        // The user's words arrive progressively while they are still speaking. Expose them
+        // early (never rendered) so the app can react before the agent starts its reply.
+        onUserPartialRef.current?.({ speaker: 'user', text: transcriptText });
       }
 
       queueTranscript(message, speaker, transcriptText);

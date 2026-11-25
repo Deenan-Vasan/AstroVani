@@ -918,21 +918,34 @@ export default function App() {
     setScene(nextScene);
   }, [clearPacedHighlights]);
 
+  /**
+   * Work out the conversation language from what the user said and tell the agent.
+   *
+   * Called on the user's IN-PROGRESS words (replay=false) so the agent is told while the user
+   * is still speaking, before it begins its reply: no wrong-language start, no pause. The
+   * final transcript calls it again as a fallback (replay=true); that only re-asks the
+   * sentence if the language was NOT already caught early and the user moved to English.
+   */
+  const applyUserLanguage = useCallback((text: string, replay: boolean) => {
+    const previousLanguage = languageRef.current;
+    const next = nextLanguage(previousLanguage, text);
+    if (next === previousLanguage) return;
+    languageRef.current = next;
+    if (!agentIdRef.current) return;
+    const replayText = replay && next === 'en' ? text : undefined;
+    console.log(`[AstroVani] Conversation language ${previousLanguage} -> ${next}; informing agent${replayText ? ' and replaying the turn' : replay ? '' : ' (early, while the user is speaking)'}.`);
+    void agora.switchLanguage(next, replayText).catch(error => {
+      console.warn('[AstroVani] Failed to update agent language', error);
+    });
+  }, []);
+
+  const handleUserPartial = useCallback((event: TranscriptEvent) => {
+    applyUserLanguage(event.text, false);
+  }, [applyUserLanguage]);
+
   const handleTranscriptEvent = useCallback(async (event: TranscriptEvent) => {
     if (event.speaker === 'user') {
-      const previousLanguage = languageRef.current;
-      languageRef.current = nextLanguage(previousLanguage, event.text);
-      if (languageRef.current !== previousLanguage && agentIdRef.current) {
-        // The agent trusts the SCRIPT of the transcript, which is wrong when English is
-        // heard as Tamil letters, and it has usually started answering in the old language by
-        // the time we know. Tell it the language and, when the user moved to English, have it
-        // answer this utterance again in the right language.
-        const replay = languageRef.current === 'en' ? event.text : undefined;
-        console.log(`[AstroVani] Conversation language ${previousLanguage} -> ${languageRef.current}; informing agent${replay ? ' and replaying the turn' : ''}.`);
-        void agora.switchLanguage(languageRef.current, replay).catch(error => {
-          console.warn('[AstroVani] Failed to update agent language', error);
-        });
-      }
+      applyUserLanguage(event.text, true);
       // `emit()` appends to transcriptRef before invoking this callback, so the user's
       // line is already the last entry.
       lastUserTurnIndexRef.current = transcriptRef.current.length - 1;
@@ -1532,7 +1545,7 @@ export default function App() {
     }
   }, [scene]);
 
-  const agora = useAgoraSession(appendTranscript, handleTranscriptEvent, handleUiSignal, handleAgentState, handleAgentTranscriptProgress);
+  const agora = useAgoraSession(appendTranscript, handleTranscriptEvent, handleUiSignal, handleAgentState, handleAgentTranscriptProgress, handleUserPartial);
 
   useEffect(() => {
     agentSpeakRef.current = agora.speak;
