@@ -3,7 +3,7 @@
 // Dependency-free: `npm run verify:language`.
 import {
   TRANSITION_SENTENCES, birthSkyIntro, cosmicThreadIntro, detectScriptLanguage, inHouse,
-  isLocalizedNextSectionRequest, isScriptedAgentPhrase, isTransliteratedEnglish, kundliIntro, localizedChapterRequest, localizedPlanetMentions,
+  isLocalizedGuidanceRequest, localizedGuidanceKind, mentionsLocalizedKundliSubject, isLocalizedNextSectionRequest, isScriptedAgentPhrase, isTransliteratedEnglish, kundliIntro, localizedChapterRequest, localizedPlanetMentions,
   nextLanguage, palmistryIntro, palmOpening, palmRetakeMessage, palmLineFallback, palmLineFromLocalizedText, stripQuotedText, sceneFromLocalizedTransition, spokenDasha, spokenDegree, spokenNumber,
   transitionSentence, type ChapterKey, type LangCode
 } from '../frontend/src/lib/language.js';
@@ -177,6 +177,16 @@ check('prompt covers code-mixed speech', /Hinglish/.test(promptText) && /Tanglis
 check('prompt handles English heard as Indian-script text', /MIS-HEARD SCRIPT/.test(promptText) && /reply in English/.test(promptText) && /switch to English at once/.test(promptText));
 check('prompt forbids mixed-script words', /ONE SCRIPT PER WORD/.test(promptText));
 check('prompt forbids asking the user to switch language', /Never ask the user to choose a language/.test(promptText));
+
+// --- Kundli guidance words ----------------------------------------------------------------
+check('Tamil Rahu-Ketu request names Rahu first', first('இது போதும், எனக்கு ராகு-கேது பற்றி தெரிய வேண்டும்.') === 'Rahu');
+check('Tamil puja is guidance', isLocalizedGuidanceRequest('இல்லை, அவர்களுக்குரிய பூஜை.') && localizedGuidanceKind('இல்லை, அவர்களுக்குரிய பூஜை.') === 'puja');
+check('Tamil mantra is guidance', localizedGuidanceKind('மந்திரங்கள் பற்றி சொல்லவும்.') === 'mantra');
+check('Hindi puja/mantra/gemstone', localizedGuidanceKind('राहु की पूजा') === 'puja' && localizedGuidanceKind('कोई मंत्र बताइए') === 'mantra' && localizedGuidanceKind('कौन सा रत्न पहनें') === 'gemstone');
+check('Hindi upay is guidance', isLocalizedGuidanceRequest('इसके लिए क्या उपाय हैं'));
+check('Tamil education is not a gemstone', !isLocalizedGuidanceRequest('கல்வி பற்றி சொல்லுங்கள்'));
+check('Tamil/Hindi subjects recognised', mentionsLocalizedKundliSubject('என் லக்னம் என்ன') && mentionsLocalizedKundliSubject('मेरी दशा क्या है'));
+check('plain chatter is not a subject', !mentionsLocalizedKundliSubject('சரி, நன்றி') && !isLocalizedGuidanceRequest('ठीक है धन्यवाद'));
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll language checks passed');
 process.exit(failures ? 1 : 0);

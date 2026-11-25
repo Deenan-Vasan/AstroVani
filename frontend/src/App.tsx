@@ -12,6 +12,7 @@ import { useAgoraSession, type AgentActivityState, type TranscriptEvent, type Ui
 import type { BirthProfile, ChartData, PalmResult, SceneName } from './types';
 import {
   birthSkyIntro, cosmicThreadIntro, isLocalizedNextSectionRequest, kundliIntro, localizedChapterRequest,
+  isLocalizedGuidanceRequest, localizedGuidanceKind, mentionsLocalizedKundliSubject,
   localizedPlanetMentions, nextLanguage, palmLineFallback, palmLineFromLocalizedText, palmOpening, palmRetakeMessage,
   palmistryIntro, sceneFromLocalizedTransition, stripQuotedText, transitionSentence,
   type LangCode
@@ -57,8 +58,8 @@ function planetFromUserText(text: string) {
     .sort((a, b) => a.index - b.index);
   if (!candidates.length) {
     // Hindi / Tamil names ("गुरु", "சனி"): a single distinct planet is a direct request.
-    const localized = [...new Set(localizedPlanetMentions(text).map(item => item.planet))];
-    return localized.length === 1 ? localized[0] : undefined;
+    // "ராகு-கேது" / "राहु और केतु": the first planet named leads the panel.
+    return localizedPlanetMentions(text)[0]?.planet;
   }
 
   // Prefer explicit conversational requests. This avoids treating a comparison/list
@@ -107,10 +108,13 @@ function topicFromGuidanceRequest(text: string) {
 }
 
 function isDirectKundliGuidanceRequest(text: string) {
-  return /\b(traditional\s+guidance|guidance|remed(?:y|ies)|pooja|puja|mantra|gemstone|practice)\b/i.test(text);
+  return /\b(traditional\s+guidance|guidance|remed(?:y|ies)|pooja|puja|mantra|gemstone|practice)\b/i.test(text)
+    || isLocalizedGuidanceRequest(text);
 }
 
 function requestedGuidanceKind(text: string): KundliGuidance['activeKind'] | undefined {
+  const localizedKind = localizedGuidanceKind(text);
+  if (localizedKind) return localizedKind;
   if (/\b(pooja|puja|temple|worship|ritual)\b/i.test(text)) return 'puja';
   if (/\bmantra\b/i.test(text)) return 'mantra';
   if (/\b(gemstone|coral|sapphire|emerald|diamond|ruby|pearl|hessonite|cat(?:'s)? eye)\b/i.test(text)) return 'gemstone';
@@ -598,7 +602,10 @@ function introducesNewKundliSubject(text: string) {
   return /\b(sun|moon|mars|mercury|jupiter|venus|saturn|rahu|ketu|surya|chandra|mangal|budh|guru|brihaspati|shukra|shani)\b/i.test(text)
     || /\b(lagna|ascendant|dasha|nakshatra|house|rashi|chart|kundli)\b/i.test(text)
     || /\b(dosha|dosh|manglik|kaal\s*sarp|pitru|pitra|guru\s+chandal|sade\s+sati|grahan|nadi)\b/i.test(text)
-    || /\b(traditional\s+guidance|guidance|remed(?:y|ies)|pooja|puja|mantra|gemstone|practice|fast(?:ing)?|donat(?:e|ion)|charity|seva|temple|ritual)\b/i.test(text);
+    || /\b(traditional\s+guidance|guidance|remed(?:y|ies)|pooja|puja|mantra|gemstone|practice|fast(?:ing)?|donat(?:e|ion)|charity|seva|temple|ritual)\b/i.test(text)
+    || localizedPlanetMentions(text).length > 0
+    || isLocalizedGuidanceRequest(text)
+    || mentionsLocalizedKundliSubject(text);
 }
 
 /**
@@ -1165,7 +1172,7 @@ export default function App() {
         const topic = requestedTopic;
         const kind = requestedGuidanceKind(event.text) ?? kundliGuidanceRef.current?.activeKind ?? 'puja';
         const requestedPlanet = planetFromUserText(event.text);
-        const planet = requestedPlanet ?? (topic === 'General' ? kundliGuidanceRef.current?.planet : undefined) ?? 'General';
+        const planet = requestedPlanet ?? (topic === 'General' ? (kundliGuidanceRef.current?.planet ?? spokenPlanetsRef.current[0]) : undefined) ?? 'General';
         pendingGuidanceUserIntentRef.current = { kind, at: Date.now() };
         lastGuidanceUiSignalAtRef.current = Date.now();
         if (requestedPlanet) {

@@ -346,6 +346,34 @@ export function localizedPlanetMentions(text: string): Array<{ planet: string; i
   return found.sort((a, b) => a.index - b.index);
 }
 
+/* Kundli remedy / subject words as spoken in Hindi and Tamil (stems; both languages inflect). */
+const GUIDANCE_PATTERNS = {
+  puja: /(?:पूजा|पूजन|मंदिर|अनुष्ठान|பூஜை|பூசை|கோவில்|கோயில்|வழிபாடு|ஹோமம்)/u,
+  mantra: /(?:मंत्र|मन्त्र|जाप|மந்திர|மந்த்ர|ஜபம்)/u,
+  gemstone: /(?:रत्न|नगीना|मोती|मूंगा|पुखराज|नीलम|पन्ना|ரத்தின|மாணிக்க|முத்து|பவளம்|நீலம்)/u,
+  practice: /(?:व्रत|उपवास|दान|सेवा|விரதம்|உபவாசம்|தானம்|சேவை)/u,
+  general: /(?:उपाय|परिहार|उपचार|मार्गदर्शन|पारंपरिक|பரிகார|வழிகாட்டு|பாரம்பரிய)/u
+} as const;
+
+export type LocalizedGuidanceKind = 'puja' | 'mantra' | 'gemstone' | 'practice';
+
+/** Is this a Hindi/Tamil request for remedies or traditional guidance? */
+export function isLocalizedGuidanceRequest(text: string): boolean {
+  return Object.values(GUIDANCE_PATTERNS).some(pattern => pattern.test(text));
+}
+
+export function localizedGuidanceKind(text: string): LocalizedGuidanceKind | undefined {
+  for (const kind of ['puja', 'mantra', 'gemstone', 'practice'] as const) {
+    if (GUIDANCE_PATTERNS[kind].test(text)) return kind;
+  }
+  return undefined;
+}
+
+/** Hindi/Tamil words for chart subjects (lagna, dasha, house, nakshatra, dosha, kundli). */
+export function mentionsLocalizedKundliSubject(text: string): boolean {
+  return /(?:लग्न|दशा|भाव|नक्षत्र|राशि|कुंडली|कुण्डली|दोष|मांगलिक|कालसर्प|साढ़ेसाती|லக்ன|தசை|திசை|வீடு|நட்சத்திரம்|ராசி|ஜாதகம்|தோஷம்|செவ்வாய்\s*தோஷம்|காலசர்ப்ப|ஏழரை)/u.test(text);
+}
+
 /* ------------------------------------------------------------------ */
 /* Scripted chapter introductions                                      */
 /* ------------------------------------------------------------------ */
