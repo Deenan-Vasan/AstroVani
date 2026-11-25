@@ -1877,12 +1877,6 @@ export default function App() {
     await agora.start();
   }
 
-  async function startTyped(birthProfile: BirthProfile) {
-    profileCompletedRef.current = false;
-    await agora.start(birthProfile);
-    await completeProfile(birthProfile, 'typed');
-  }
-
   return (
     <div className="app-shell">
       <TopBar scene={scene} connectionState={agora.state} />
@@ -1891,7 +1885,6 @@ export default function App() {
         <section className="stage">
           {scene === 'intro' && <BirthForm
             onStartVoice={startVoice}
-            onStartTyped={startTyped}
             loading={loading}
             connecting={agora.state === 'connecting'}
             live={agora.state === 'connected'}
