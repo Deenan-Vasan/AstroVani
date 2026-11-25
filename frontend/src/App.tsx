@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createSession, extractBirthProfile, updateAgentChart, updateAgentLanguage, updateAgentPalm } from './api';
+import { createSession, extractBirthProfile, updateAgentChart, updateAgentPalm } from './api';
 import { TopBar } from './components/TopBar';
 import { GuidePanel } from './components/GuidePanel';
 import { JourneyRail } from './components/JourneyRail';
@@ -924,9 +924,12 @@ export default function App() {
       languageRef.current = nextLanguage(previousLanguage, event.text);
       if (languageRef.current !== previousLanguage && agentIdRef.current) {
         // The agent trusts the SCRIPT of the transcript, which is wrong when English is
-        // heard as Tamil letters. Tell it the language the app has worked out.
-        console.log(`[AstroVani] Conversation language ${previousLanguage} -> ${languageRef.current}; informing agent.`);
-        void updateAgentLanguage(agentIdRef.current, languageRef.current).catch(error => {
+        // heard as Tamil letters, and it has usually started answering in the old language by
+        // the time we know. Tell it the language and, when the user moved to English, have it
+        // answer this utterance again in the right language.
+        const replay = languageRef.current === 'en' ? event.text : undefined;
+        console.log(`[AstroVani] Conversation language ${previousLanguage} -> ${languageRef.current}; informing agent${replay ? ' and replaying the turn' : ''}.`);
+        void agora.switchLanguage(languageRef.current, replay).catch(error => {
           console.warn('[AstroVani] Failed to update agent language', error);
         });
       }

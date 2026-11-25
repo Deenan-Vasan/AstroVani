@@ -72,9 +72,9 @@ export async function speakAgoraAgent(agentId: string, text: string, interruptab
 }
 
 /** Tell the running agent which language the user is speaking now. */
-export async function updateAgentLanguage(agentId: string, language: string) {
+export async function updateAgentLanguage(agentId: string, language: string, replayText?: string) {
   return json<{ success: boolean }>(await fetch(apiUrl('/api/agora/agent/language'), {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId, language })
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId, language, replayText })
   }));
 }
 

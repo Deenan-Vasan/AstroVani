@@ -7,7 +7,7 @@ import AgoraRTC, {
   type UID
 } from 'agora-rtc-sdk-ng';
 import type { BirthProfile } from '../types';
-import { createAgoraRtcSession, speakAgoraAgent, startAgoraAgent, stopAgoraAgent, thinkAgoraAgent } from '../api';
+import { createAgoraRtcSession, speakAgoraAgent, startAgoraAgent, stopAgoraAgent, thinkAgoraAgent, updateAgentLanguage } from '../api';
 
 export type AgoraConnectionState = 'idle' | 'connecting' | 'connected' | 'error';
 export type TranscriptEvent = { speaker: 'user' | 'agent' | 'system'; text: string };
@@ -311,6 +311,21 @@ export function useAgoraSession(
     await thinkAgoraAgent(id, normalized);
   }, [emit]);
 
+  /**
+   * Tell the agent the user's language changed. With `replayText` the agent also re-answers
+   * that utterance after the update: the update arrives after the agent has already started
+   * answering the turn in the OLD language, so without a replay the first reply after a
+   * switch is always in the wrong language.
+   */
+  const switchLanguage = useCallback(async (language: string, replayText?: string) => {
+    const id = agentIdRef.current;
+    if (!id) return;
+    const text = replayText?.trim();
+    // Seed dedupe so a provider echo of the replayed input cannot create a second chat bubble.
+    if (text) isDuplicateTranscript(transcriptSeenRef.current, `text:user:${text}`, 30000);
+    await updateAgentLanguage(id, language, text);
+  }, []);
+
   const stop = useCallback(async () => {
     const agentId = agentIdRef.current;
     agentIdRef.current = null;
@@ -424,7 +439,7 @@ export function useAgoraSession(
   return {
     state, error, channel, uid, micEnabled, cameraEnabled,
     localVideoTrack, remoteVideoTrack, remoteVideoUid, agentId,
-    start, stop, speak, ask, toggleMic, toggleCamera
+    start, stop, speak, ask, switchLanguage, toggleMic, toggleCamera
   };
 }
 

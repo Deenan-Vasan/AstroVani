@@ -210,6 +210,10 @@ app.post('/api/agora/agent/language', async (req, res) => {
   if (!agentId || !/^[a-z]{2}$/.test(language)) return res.status(400).json({ error: 'agentId and a two-letter language are required' });
   try {
     await updateAgoraAgentLanguage(agentId, language);
+    // The update reaches the agent after it has begun answering in the old language. Re-ask the
+    // utterance so the answer is produced under the new instruction (interrupts the old reply).
+    const replayText = String(req.body?.replayText || '').trim().slice(0, 500);
+    if (replayText) await thinkAgoraAgent(agentId, replayText, 'language_switch');
     return res.json({ success: true });
   } catch (error) {
     console.error('Agora agent language update failed:', error);

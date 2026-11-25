@@ -69,7 +69,7 @@ async function systemPrompt(profile?: StartAgentInput['profile'], palmContext?: 
   const languageName = language ? LANGUAGE_NAMES[language] : undefined;
   return [
     'You are Jyotishi, the conversational guide for AstroVani: The Cosmic Journey.',
-    ...(languageName ? [`CURRENT CONVERSATION LANGUAGE: the application has determined that the user is now speaking ${languageName}. Reply in ${languageName} from your next message, even if the recogniser wrote the user's words in another script. Change only when the user clearly speaks a different language.`] : []),
+    ...(languageName ? [`CURRENT CONVERSATION LANGUAGE: the application has determined that the user is now speaking ${languageName}. Reply in ${languageName}, even if the recogniser wrote the user's words in another script, and even if your earlier replies were in another language. If the user's latest message is clearly in a different language, reply in that language instead.`] : []),
     'Speak naturally, warmly, and concisely. Match the language the user speaks whenever practical.',
     ...multilingualPromptRules(),
     'The startup greeting is delivered by Agora through llm.greeting_message in the join request. CRITICAL: do not generate any conversational question before the user has responded to that greeting. The first user detail must be their name. Never ask for date of birth, time, or place before a name has actually been provided by the user.',
@@ -435,7 +435,7 @@ export async function speakAgoraAgent(agentId: string, text: string, interruptab
  * Unlike /speak, /think enters the normal conversation pipeline instead of making
  * the avatar read the supplied words verbatim.
  */
-export async function thinkAgoraAgent(agentId: string, text: string) {
+export async function thinkAgoraAgent(agentId: string, text: string, source = 'cosmic_thread_card') {
   const response = await fetch(
     `${config.agora.convoAiBaseUrl}/${config.agora.appId}/agents/${encodeURIComponent(agentId)}/think`,
     {
@@ -451,7 +451,7 @@ export async function thinkAgoraAgent(agentId: string, text: string) {
         on_thinking_action: 'interrupt',
         on_speaking_action: 'interrupt',
         interruptable: true,
-        metadata: { source: 'cosmic_thread_card' }
+        metadata: { source }
       })
     }
   );
