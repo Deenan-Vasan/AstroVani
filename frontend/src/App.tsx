@@ -941,6 +941,16 @@ export default function App() {
 
   const handleUserPartial = useCallback((event: TranscriptEvent) => {
     applyUserLanguage(event.text, false);
+    if (event.text.trim().length >= 3) {
+      // The user has started speaking. Do not let the scripted Birth Sky introduction start
+      // over their question (it used to fire mid-sentence and replay the whole intro instead
+      // of answering). The final transcript used to be the only thing that cancelled it.
+      birthSkyAutoIntroCancelledRef.current = true;
+      if (birthSkyAutoIntroTimerRef.current) {
+        window.clearTimeout(birthSkyAutoIntroTimerRef.current);
+        birthSkyAutoIntroTimerRef.current = undefined;
+      }
+    }
   }, [applyUserLanguage]);
 
   const handleTranscriptEvent = useCallback(async (event: TranscriptEvent) => {
