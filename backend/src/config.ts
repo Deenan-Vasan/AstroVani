@@ -32,6 +32,20 @@ function asrLanguageEnv() {
   return [...new Set(tags.length ? tags : DEFAULT_ASR_LANGUAGE.split(','))].join(',');
 }
 
+/** Extra, non-secret Murf parameters as a JSON object (AGORA passes unlisted params through to Murf). */
+function jsonObjectEnv(name: string): Record<string, unknown> {
+  const raw = (process.env[name] || '').trim();
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+    console.warn(`[config] ${name} must be a JSON object; ignoring it.`);
+  } catch {
+    console.warn(`[config] ${name} is not valid JSON; ignoring it.`);
+  }
+  return {};
+}
+
 function listEnv(name: string) {
   return (process.env[name] || '').split(',').map(v => v.trim().replace(/\/+$/, '')).filter(Boolean);
 }
@@ -94,6 +108,8 @@ export const config = {
     rate: numberEnv('MURF_RATE', 0, true),
     pitch: numberEnv('MURF_PITCH', 0, true),
     model: (process.env.MURF_MODEL || 'FALCON').trim(),
-    sampleRate: numberEnv('MURF_SAMPLE_RATE', 24000)
+    sampleRate: numberEnv('MURF_SAMPLE_RATE', 24000),
+    // Optional extra Murf parameters, e.g. a multilingual-voice option. Never overrides the standard fields.
+    extraParams: jsonObjectEnv('MURF_EXTRA_PARAMS_JSON')
   }
 };

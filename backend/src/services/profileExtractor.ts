@@ -30,7 +30,9 @@ export async function extractBirthProfile(transcript: string[], current: Partial
             'Use null for unknown fields. Never guess missing values.',
             'Normalize date to YYYY-MM-DD when the user clearly supplied enough information.',
             'Normalize time to HH:MM in 24-hour format when the user clearly supplied enough information.',
-            'Keep place as the user expressed it, cleaned up for readability.',
+            'The transcript may be in English, Hindi, Tamil, Telugu, Marathi or Kannada, in native script or mixed with English, and numbers may be spoken as words in any of those languages (for example "दो हज़ार तेईस" or "இரண்டாயிரத்து இருபத்து மூன்று"). Understand all of them when extracting the date and time.',
+            'Keep name exactly as the user said it, in the script it was given; do not translate or transliterate it.',
+            'For place, return the commonly used English (Latin-script) spelling of the place name so it can be geocoded, for example a Tamil or Devanagari spelling of a city becomes its English name. If you are not sure of the English name, keep the place as the user expressed it.',
             'language should be the language primarily spoken by the user when identifiable, otherwise null.',
             'complete must be true only when name, date, time, and place are all known.',
             'The current object contains previously extracted values. Preserve them unless the user clearly corrects them.'
