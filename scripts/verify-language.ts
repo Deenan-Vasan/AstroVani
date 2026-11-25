@@ -155,6 +155,8 @@ for (const lang of ['hi', 'ta'] as const) {
 }
 check('prompt tells the model to spell numbers as words', /NUMBERS IN SPOKEN REPLIES/.test(promptText) && /as WORDS/.test(promptText));
 check('prompt covers code-mixed speech', /Hinglish/.test(promptText) && /Tanglish/.test(promptText));
+check('prompt handles English heard as Indian-script text', /MIS-HEARD SCRIPT/.test(promptText) && /reply in English/.test(promptText) && /switch to English at once/.test(promptText));
+check('prompt forbids mixed-script words', /ONE SCRIPT PER WORD/.test(promptText));
 check('prompt forbids asking the user to switch language', /Never ask the user to choose a language/.test(promptText));
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll language checks passed');
