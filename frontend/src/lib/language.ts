@@ -378,3 +378,114 @@ export function cosmicThreadIntro(lang: LangCode): string {
   }
   return 'The Cosmic Thread is now open. This timeline connects your calculated chart themes and planetary periods into one guided journey. Ask me about the current phase, an upcoming period, or a life theme you want to explore.';
 }
+
+// --- Palmistry ----------------------------------------------------------------------------------
+// The palm analysis arrives from the backend with English names and readings. Spoken (/speak)
+// palm lines must follow the conversation language, so Hindi and Tamil text lives here.
+
+export type PalmLineKey = 'heart_line' | 'head_line' | 'life_line' | 'fate_line';
+
+const PALM_NAMES: Record<'hi' | 'ta', Record<PalmLineKey, string>> = {
+  hi: { heart_line: 'हृदय रेखा', head_line: 'मस्तिष्क रेखा', life_line: 'जीवन रेखा', fate_line: 'भाग्य रेखा' },
+  ta: { heart_line: 'இதய ரேகை', head_line: 'தலை ரேகை', life_line: 'ஆயுள் ரேகை', fate_line: 'விதி ரேகை' }
+};
+
+const PALM_READINGS: Record<'hi' | 'ta', Record<PalmLineKey, string>> = {
+  hi: {
+    heart_line: 'पारंपरिक रूप से यह रेखा भावनात्मक अभिव्यक्ति और रिश्तों की शैली से जुड़ी मानी जाती है।',
+    head_line: 'पारंपरिक रूप से यह रेखा सोचने की शैली, एकाग्रता और निर्णय लेने से जुड़ी मानी जाती है।',
+    life_line: 'पारंपरिक रूप से यह रेखा जीवन-शक्ति के विषयों से जुड़ी मानी जाती है; इससे आयु का अनुमान नहीं लगाना चाहिए।',
+    fate_line: 'पारंपरिक रूप से यह रेखा दिशा, कार्य और जीवन-पथ के बड़े बदलावों से जुड़ी मानी जाती है।'
+  },
+  ta: {
+    heart_line: 'பாரம்பரியமாக இது உணர்வு வெளிப்பாடு மற்றும் உறவு பாணியுடன் தொடர்புடையதாகக் கருதப்படுகிறது.',
+    head_line: 'பாரம்பரியமாக இது சிந்தனை முறை, கவனம் மற்றும் முடிவெடுக்கும் திறனுடன் தொடர்புடையதாகக் கருதப்படுகிறது.',
+    life_line: 'பாரம்பரியமாக இது உயிர்ச்சக்தி தொடர்பான கருப்பொருள்களுடன் தொடர்புடையது; இதைக் கொண்டு ஆயுளைக் கணிக்கக் கூடாது.',
+    fate_line: 'பாரம்பரியமாக இது திசை, தொழில் மற்றும் வாழ்க்கைப் பாதையின் பெரிய மாற்றங்களுடன் தொடர்புடையதாகக் கருதப்படுகிறது.'
+  }
+};
+
+export type PalmLineText = { id: PalmLineKey; name: string; traditionalReading: string; observation?: string };
+
+/** Line name in the conversation language (English keeps the backend's name). */
+export function palmLineName(line: PalmLineText, lang: LangCode): string {
+  const t = translatedLang(lang);
+  return t === 'en' ? line.name : PALM_NAMES[t][line.id];
+}
+
+/** Traditional reading in the conversation language (English keeps the backend's text). */
+export function palmLineReading(line: PalmLineText, lang: LangCode): string {
+  const t = translatedLang(lang);
+  return t === 'en' ? line.traditionalReading : PALM_READINGS[t][line.id];
+}
+
+/** Optional "It appears ..." remark. The observation is free English from the vision model, so it is only spoken in English. */
+function palmMorphology(line: PalmLineText, lang: LangCode): string {
+  if (translatedLang(lang) !== 'en') return '';
+  return line.observation && line.observation !== 'indeterminate' ? ` It appears ${line.observation}.` : '';
+}
+
+export function palmOpening(first: PalmLineText, second: PalmLineText | undefined, lang: LangCode): string {
+  const t = translatedLang(lang);
+  const a = palmLineName(first, lang);
+  const b = second ? palmLineName(second, lang) : '';
+  const reading = `${a}: ${palmLineReading(first, lang)}${palmMorphology(first, lang)}`;
+  if (t === 'hi') {
+    return `अब मुझे आपकी हथेली की मुख्य रेखाएँ दिख रही हैं। मैं आपकी ${a} से शुरू करता हूँ। ${reading}${b ? ` उसके बाद हम आपकी ${b} देखेंगे।` : ''}`;
+  }
+  if (t === 'ta') {
+    return `இப்போது உங்கள் உள்ளங்கையின் முக்கிய ரேகைகள் எனக்குத் தெரிகின்றன. உங்கள் ${a}யிலிருந்து தொடங்குகிறேன். ${reading}${b ? ` அதன் பிறகு உங்கள் ${b}யைப் பார்ப்போம்.` : ''}`;
+  }
+  return `I can see your major palm lines now. Let me begin with your ${a}. ${reading}${b ? ` After that, we can look at your ${b}.` : ''}`;
+}
+
+export function palmRetakeMessage(lang: LangCode): string {
+  const t = translatedLang(lang);
+  if (t === 'hi') return 'मुझे आपकी हथेली दिख रही है, लेकिन भरोसेमंद मार्गदर्शित पाठ के लिए मुख्य रेखाएँ अभी पर्याप्त साफ़ नहीं हैं। कृपया हथेली को सीधी रखकर, कैमरे के पास और समान रोशनी में दोबारा कैप्चर करें।';
+  if (t === 'ta') return 'உங்கள் உள்ளங்கை எனக்குத் தெரிகிறது, ஆனால் நம்பகமான வழிகாட்டப்பட்ட வாசிப்புக்கு முக்கிய ரேகைகள் இன்னும் போதுமான அளவு தெளிவாக இல்லை. தயவுசெய்து உள்ளங்கையை நேராக, கேமராவுக்கு அருகில், சீரான வெளிச்சத்தில் மீண்டும் படம் எடுக்கவும்.';
+  return 'I can see your palm, but the major lines are not clear enough for a reliable guided reading yet. Please retake it with your palm flat, close to the camera, and evenly lit.';
+}
+
+const PALM_DISCLAIMER = {
+  en: 'This is a traditional palmistry-style interpretation, not a medical or scientific assessment.',
+  hi: 'यह एक पारंपरिक हस्तरेखा-शैली की व्याख्या है, कोई चिकित्सीय या वैज्ञानिक आकलन नहीं।',
+  ta: 'இது ஒரு பாரம்பரிய கைரேகை பாணி விளக்கம்; மருத்துவ அல்லது அறிவியல் மதிப்பீடு அல்ல.'
+};
+
+/** Spoken fallback when the agent was asked about one line but produced no speech. */
+export function palmLineFallback(line: PalmLineText | undefined, lineId: PalmLineKey, status: string | undefined, lang: LangCode): string {
+  const t = translatedLang(lang);
+  const name = line ? palmLineName(line, lang) : (t === 'en' ? lineId.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) : PALM_NAMES[t][lineId]);
+  const lead = t === 'hi' ? `आइए आपकी ${name} पर ध्यान दें।` : t === 'ta' ? `உங்கள் ${name}யைப் பற்றிப் பார்ப்போம்.` : `Let us focus on your ${name}.`;
+  if (!line) {
+    return t === 'hi' ? `${lead} इस रेखा का स्पष्ट कैप्चर किया हुआ पाठ मेरे पास अभी नहीं है। अधिक भरोसेमंद व्याख्या के लिए कृपया तेज़ और समान रोशनी में हथेली दोबारा कैप्चर करें।`
+      : t === 'ta' ? `${lead} இந்த ரேகைக்கான தெளிவான வாசிப்பு என்னிடம் இன்னும் இல்லை. மேலும் நம்பகமான விளக்கத்திற்கு, பிரகாசமான சீரான வெளிச்சத்தில் உள்ளங்கையை மீண்டும் படம் எடுக்கவும்.`
+      : `${lead} I do not have a clear captured reading for that line yet, so please retake the palm image in brighter, even lighting if you would like a more grounded interpretation.`;
+  }
+  if (status === 'not_clear' || status === 'estimated') {
+    return t === 'hi' ? `${lead} कैप्चर की गई तस्वीर में यह रेखा साफ़ नहीं थी, इसलिए गाइड सामान्य हथेली की बनावट के आधार पर रखा गया है। मैं इससे पक्का पाठ नहीं दे सकता। कृपया हथेली सीधी, पास और समान रोशनी में रखकर दोबारा कैप्चर करें।`
+      : t === 'ta' ? `${lead} படத்தில் இந்த ரேகை தெளிவாக இல்லை, அதனால் வழிகாட்டி பொதுவான உள்ளங்கை அமைப்பின் அடிப்படையில் வைக்கப்பட்டுள்ளது. இதிலிருந்து உறுதியான வாசிப்பை நான் தர முடியாது. உள்ளங்கையை நேராக, அருகில், சீரான வெளிச்சத்தில் வைத்து மீண்டும் படம் எடுக்கவும்.`
+      : `${lead} This guide is placed from typical palm anatomy because the crease was not clear enough in the captured image. I should not make a confident reading from it. You can retake the image with your palm flat, close and evenly lit.`;
+  }
+  return `${lead} ${palmLineReading(line, lang)}${palmMorphology(line, lang)} ${PALM_DISCLAIMER[t]}`;
+}
+
+/** Which palm line does a Hindi/Tamil agent turn start with? (first 280 chars, like the English matcher) */
+export function palmLineFromLocalizedText(text: string): PalmLineKey | undefined {
+  const opening = text.slice(0, 280);
+  const stems: Array<[PalmLineKey, RegExp]> = [
+    ['heart_line', /हृदय\s*रेखा|ह्रदय\s*रेखा|இதய\s*ரேகை/],
+    ['head_line', /मस्तिष्क\s*रेखा|दिमाग़?\s*की\s*रेखा|தலை\s*ரேகை/],
+    ['life_line', /जीवन\s*रेखा|ஆயுள்\s*ரேகை|உயிர்\s*ரேகை/],
+    ['fate_line', /भाग्य\s*रेखा|விதி\s*ரேகை|அதிர்ஷ்ட\s*ரேகை/]
+  ];
+  const hits = stems.map(([id, re]) => ({ id, at: opening.search(re) })).filter(h => h.at >= 0).sort((x, y) => x.at - y.at);
+  return hits[0]?.id;
+}
+
+/** Remove quoted passages so a quoted example ("Palmistry is opening now.") is not read as a command. */
+export function stripQuotedText(text: string): string {
+  return text
+    .replace(/["“”][^"“”]*["“”]/g, ' ')
+    .replace(/(^|[\s(])['‘][^'‘’]*['’]/g, '$1 ');
+}

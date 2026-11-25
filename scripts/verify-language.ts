@@ -4,7 +4,7 @@
 import {
   TRANSITION_SENTENCES, birthSkyIntro, cosmicThreadIntro, detectScriptLanguage, inHouse,
   isLocalizedNextSectionRequest, kundliIntro, localizedChapterRequest, localizedPlanetMentions,
-  nextLanguage, palmistryIntro, sceneFromLocalizedTransition, spokenDasha, spokenDegree, spokenNumber,
+  nextLanguage, palmistryIntro, palmOpening, palmRetakeMessage, palmLineFallback, palmLineFromLocalizedText, stripQuotedText, sceneFromLocalizedTransition, spokenDasha, spokenDegree, spokenNumber,
   transitionSentence, type ChapterKey, type LangCode
 } from '../frontend/src/lib/language.js';
 import { TRANSITION_PROMPT_SENTENCES, multilingualPromptRules } from '../backend/src/services/languageGuide.js';
@@ -114,6 +114,36 @@ check('Tamil Birth Sky intro uses Tamil names and words', /மிதுனம்
 check('Telugu falls back to English intro', palmistryIntro('te') === palmistryIntro('en'));
 check('Marathi uses the Hindi intro', palmistryIntro('mr') === palmistryIntro('hi'));
 check('missing Sun is handled in every language', (['en', 'hi', 'ta'] as LangCode[]).every(l => birthSkyIntro(undefined, l).length > 20));
+
+// --- palm narration follows the conversation language ----------------------------------------------
+const heart = { id: 'heart_line' as const, name: 'Heart line', traditionalReading: 'Traditionally associated with emotional expression.', observation: 'long and curved' };
+const head = { id: 'head_line' as const, name: 'Head line', traditionalReading: 'Traditionally associated with thinking style.' };
+const enOpen = palmOpening(heart, head, 'en');
+check('English palm opening keeps backend text', enOpen.includes('Heart line') && enOpen.includes('long and curved') && enOpen.includes('Head line'));
+const taOpen = palmOpening(heart, head, 'ta');
+check('Tamil palm opening has no English letters', !/[A-Za-z]/.test(taOpen), taOpen);
+check('Tamil palm opening names both lines', taOpen.includes('இதய ரேகை') && taOpen.includes('தலை ரேகை'));
+const hiOpen = palmOpening(heart, head, 'hi');
+check('Hindi palm opening has no English letters', !/[A-Za-z]/.test(hiOpen), hiOpen);
+check('Hindi palm opening names both lines', hiOpen.includes('हृदय रेखा') && hiOpen.includes('मस्तिष्क रेखा'));
+check('palm opening without a second line is fine', !/undefined/.test(palmOpening(heart, undefined, 'ta')));
+for (const lang of ['hi', 'ta'] as const) {
+  check(`${lang} retake message has no English letters`, !/[A-Za-z]/.test(palmRetakeMessage(lang)));
+  for (const id of ['heart_line', 'head_line', 'life_line', 'fate_line'] as const) {
+    const l = { id, name: 'X', traditionalReading: 'Y' };
+    check(`${lang} ${id} fallback is fully translated`, !/[A-Za-z]/.test(palmLineFallback(l, id, 'detected', lang)));
+    check(`${lang} ${id} unclear fallback is fully translated`, !/[A-Za-z]/.test(palmLineFallback(l, id, 'not_clear', lang)));
+    check(`${lang} ${id} missing-line fallback is fully translated`, !/[A-Za-z]/.test(palmLineFallback(undefined, id, undefined, lang)));
+  }
+}
+eq('Tamil heart line recognised', palmLineFromLocalizedText('இதய ரேகை பற்றிப் பார்ப்போம்'), 'heart_line');
+eq('Hindi fate line recognised', palmLineFromLocalizedText('अब भाग्य रेखा देखते हैं'), 'fate_line');
+eq('Hindi earliest line wins', palmLineFromLocalizedText('जीवन रेखा के बाद हृदय रेखा'), 'life_line');
+eq('no palm line -> undefined', palmLineFromLocalizedText('नमस्ते'), undefined);
+check('quoted transition is stripped (double quotes)', !/opening now/.test(stripQuotedText('I can say, "Palmistry is opening now." Would you like that?')));
+check('quoted transition is stripped (single quotes)', !/opening now/.test(stripQuotedText("I can say, 'Palmistry is opening now.' Would you like that?")));
+check('apostrophes are not treated as quotes', stripQuotedText("you're asking, it's fine. Palmistry is opening now.").includes('Palmistry is opening now'));
+check('unquoted transition survives', stripQuotedText('Thanks. Palmistry is opening now.').includes('opening now'));
 
 // --- backend prompt stays in sync with the frontend -------------------------------------------
 const promptText = multilingualPromptRules().join(' ');

@@ -12,7 +12,8 @@ import { useAgoraSession, type AgentActivityState, type TranscriptEvent, type Ui
 import type { BirthProfile, ChartData, PalmResult, SceneName } from './types';
 import {
   birthSkyIntro, cosmicThreadIntro, isLocalizedNextSectionRequest, kundliIntro, localizedChapterRequest,
-  localizedPlanetMentions, nextLanguage, palmistryIntro, sceneFromLocalizedTransition, transitionSentence,
+  localizedPlanetMentions, nextLanguage, palmLineFallback, palmLineFromLocalizedText, palmOpening, palmRetakeMessage,
+  palmistryIntro, sceneFromLocalizedTransition, stripQuotedText, transitionSentence,
   type LangCode
 } from './lib/language';
 
@@ -545,18 +546,12 @@ function palmLineFromAgentText(text: string): PalmLineId | undefined {
   for (const line of palmLineNames) {
     if (line.patterns.some(pattern => pattern.test(opening))) return line.id;
   }
-  return undefined;
+  return palmLineFromLocalizedText(text);
 }
 
-function buildPalmLineFallback(result: PalmResult | null, lineId: PalmLineId) {
-  const label = lineId.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+function buildPalmLineFallback(result: PalmResult | null, lineId: PalmLineId, lang: LangCode) {
   const line = result?.lines.find(item => item.id === lineId);
-  if (!line) return `Let us focus on your ${label}. I do not have a clear captured reading for that line yet, so please retake the palm image in brighter, even lighting if you would like a more grounded interpretation.`;
-  if (line.status === 'not_clear' || line.status === 'estimated') {
-    return `Let us focus on your ${line.name}. This guide is placed from typical palm anatomy because the crease was not clear enough in the captured image. I should not make a confident reading from it. You can retake the image with your palm flat, close and evenly lit.`;
-  }
-  const morphology = line.observation && line.observation !== 'indeterminate' ? ` It appears ${line.observation}.` : '';
-  return `Let us focus on your ${line.name}. ${line.traditionalReading}${morphology} This is a traditional palmistry-style interpretation, not a medical or scientific assessment.`;
+  return palmLineFallback(line, lineId, line?.status, lang);
 }
 
 function sceneFromAgentText(text: string): SceneName | undefined {
@@ -570,11 +565,13 @@ function sceneFromAgentText(text: string): SceneName | undefined {
     { scene: 'thread', patterns: [/\bthe cosmic thread is opening now\b/i] },
     { scene: 'intro', patterns: [/\breturning to arrival now\b/i] }
   ];
+  // A phrase the agent merely quotes ("I can say, 'Palmistry is opening now.'") is not a command.
+  const spoken = stripQuotedText(text);
   for (const rule of rules) {
-    if (rule.patterns.some(pattern => pattern.test(text))) return rule.scene;
+    if (rule.patterns.some(pattern => pattern.test(spoken))) return rule.scene;
   }
   // Hindi and Tamil transition sentences (see lib/language.ts and the agent prompt).
-  return sceneFromLocalizedTransition(text);
+  return sceneFromLocalizedTransition(spoken);
 }
 
 function nextSceneFromJourney(scene: SceneName): SceneName | undefined {
@@ -1218,7 +1215,7 @@ export default function App() {
           if (!speak) return;
           palmLineFallbackRequestRef.current = null;
           console.warn('[AstroVani] Palm line request produced no spoken response; using grounded /speak fallback:', requestedLine);
-          void speak(buildPalmLineFallback(palmResultRef.current, requestedLine), { interruptable: true }).catch(error => {
+          void speak(buildPalmLineFallback(palmResultRef.current, requestedLine, languageRef.current), { interruptable: true }).catch(error => {
             console.warn('[AstroVani] Palm line fallback speech failed.', error);
           });
         }, 2600);
@@ -1783,10 +1780,12 @@ export default function App() {
       (line.status === 'detected' || line.status === 'approximate') && line.confidence >= 0.45
     );
     const first = readable[0];
+    // Speak in the language the conversation is in, not always English.
+    const lang = languageRef.current;
     if (!first) {
       setSpokenPalmLine(undefined);
       try {
-        await agora.speak('I can see your palm, but the major lines are not clear enough for a reliable guided reading yet. Please retake it with your palm flat, close to the camera, and evenly lit.', { interruptable: true });
+        await agora.speak(palmRetakeMessage(lang), { interruptable: true });
       } catch (error) {
         console.error('[AstroVani] Failed to start palm retake guidance', error);
       }
@@ -1794,14 +1793,8 @@ export default function App() {
     }
 
     setSpokenPalmLine(first.id);
-    const describe = (line: PalmResult['lines'][number]) => {
-      const morphology = line.observation && line.observation !== 'indeterminate'
-        ? ` It appears ${line.observation}.`
-        : '';
-      return `${line.name}: ${line.traditionalReading}${morphology}`;
-    };
     const second = readable.find(line => line.id !== first.id);
-    const opening = `I can see your major palm lines now. Let me begin with your ${first.name}. ${describe(first)}${second ? ` After that, we can look at your ${second.name}.` : ''}`;
+    const opening = palmOpening(first, second, lang);
     try {
       await agora.speak(opening, { interruptable: true });
     } catch (error) {
