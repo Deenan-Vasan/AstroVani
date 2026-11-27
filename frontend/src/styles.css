@@ -824,3 +824,15 @@ html, body, #root { height: 100%; overflow: hidden; }
 /* Arrival card taller than the viewport (small laptop windows, zoomed browsers) must scroll. */
 .stage:has(> .birth-card) { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #4a385b transparent; }
 .stage > .birth-card { margin: 3vh auto; }
+
+/* Locked chapters (before the cosmic profile is complete) */
+.journey-item.locked { opacity: .45; cursor: not-allowed; }
+.journey-item.locked:hover { background: transparent; color: #71677e; }
+
+/* Palmistry scrolls: the capture stage plus the observations list is taller than the
+   viewport, and the shared scene rules clip everything. Let this scene scroll instead. */
+.scene-wrap.palm-scene { height: 100%; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #4a385b transparent; padding-bottom: 28px; }
+.palm-scene .palm-layout { height: auto; min-height: 560px; align-items: stretch; }
+.palm-scene .camera-stage { height: auto; min-height: 560px; }
+.palm-scene .palm-result { overflow: visible; }
+.palm-scene .scene-next { margin-bottom: 8px; }

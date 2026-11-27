@@ -716,6 +716,9 @@ export default function App() {
   const [scene, setScene] = useState<SceneName>('intro');
   const [chart, setChart] = useState<ChartData>(fallbackChart);
   const [profile, setProfile] = useState<BirthProfile>();
+  // The other chapters are built from the user's own birth details, so the journey rail
+  // stays locked until the cosmic profile has been completed.
+  const [journeyUnlocked, setJourneyUnlocked] = useState(false);
   const [profileProgress, setProfileProgress] = useState<Partial<BirthProfile>>({});
   const [loading, setLoading] = useState(false);
   const [transcript, setTranscript] = useState<string[]>([
@@ -883,10 +886,17 @@ export default function App() {
       if (source === 'typed') setScene('sky');
     } finally {
       setLoading(false);
+      setJourneyUnlocked(true);
     }
   }, [appendTranscript]);
 
   const commitChapterScene = useCallback((nextScene: SceneName, reason: string) => {
+    // Nothing past Arrival opens before the cosmic profile exists, even if the user (or
+    // the agent) says "open the Kundli" early.
+    if (nextScene !== 'intro' && !profileCompletedRef.current) {
+      console.log('[AstroVani] Ignoring chapter navigation before the cosmic profile is complete:', nextScene);
+      return;
+    }
     console.log('[AstroVani] Committing chapter scene:', nextScene, reason);
 
     if (chapterNavigationFallbackTimerRef.current) {
@@ -1914,6 +1924,7 @@ export default function App() {
     walkthroughGenerationRef.current += 1;
     setSpokenPalmLine(undefined);
     setProfile(undefined);
+    setJourneyUnlocked(false);
     profileProgressRef.current = {};
     setProfileProgress({});
     transcriptRef.current = [];
@@ -1927,7 +1938,7 @@ export default function App() {
     <div className="app-shell">
       <TopBar scene={scene} connectionState={agora.state} />
       <main className="app-main">
-        <JourneyRail scene={scene} onChange={setScene} />
+        <JourneyRail scene={scene} onChange={setScene} unlocked={journeyUnlocked} />
         <section className="stage">
           {scene === 'intro' && <BirthForm
             onStartVoice={startVoice}
