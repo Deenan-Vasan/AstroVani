@@ -3,7 +3,7 @@ import { FilesetResolver, HandLandmarker, type NormalizedLandmark } from '@media
 import { analyzePalm } from '../api';
 import type { PalmResult } from '../types';
 import type { ICameraVideoTrack } from 'agora-rtc-sdk-ng';
-import { extractPalmCvCandidates } from './palmCv';
+import { extractPalmCvCandidates, type PalmCvCandidate } from './palmCv';
 
 export type PalmLineId = 'heart_line' | 'head_line' | 'life_line' | 'fate_line';
 
@@ -573,8 +573,8 @@ function fusePalmCanvases(frames: HTMLCanvasElement[]) {
   if (!out) return frames[0];
 
   // Median fusion keeps crease edges from the sharpest frames while rejecting single-frame
-  // sensor noise. We only fuse the best three frames, captured within a very short burst.
-  const sample = frames.slice(0, 3).map(frame => {
+  // sensor noise. We fuse up to the best five frames, captured within a very short burst.
+  const sample = frames.slice(0, 5).map(frame => {
     const ctx = frame.getContext('2d', { willReadFrequently: true });
     return ctx?.getImageData(0, 0, width, height);
   }).filter(Boolean) as ImageData[];
@@ -801,11 +801,20 @@ function claheLuma(lum: Float32Array, w: number, h: number, tilesX = 8, tilesY =
   return out;
 }
 
+function smoothstep(edge0: number, edge1: number, x: number) {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
 function enhancePalmCanvasForDisplay(source: HTMLCanvasElement) {
-  // Display-only enhancement: CLAHE for local crease contrast, then a multi-scale
-  // unsharp mask. Keeps full color (unlike the grayscale analysis enhancement) and
-  // recovers the crease definition that a cropped, upscaled camera frame loses. The
-  // image sent to the backend for vision analysis is untouched by this function.
+  // Display-only enhancement. The previous version ran strong CLAHE and a hard unsharp
+  // mask straight on the noisy, upscaled webcam crop, which amplified sensor noise and
+  // JPEG blocks into a gritty, over-contrasty picture. The order here is deliberately:
+  //   1. neutralise the colour cast (webcam skin often goes orange/red),
+  //   2. denoise the luminance so there is nothing noisy to amplify,
+  //   3. gentle CLAHE, blended with the denoised tones so skin stays natural,
+  //   4. crease-aware sharpening that only boosts real edges above the noise floor.
+  // The image sent to the backend for vision analysis is untouched by this function.
   const w = source.width;
   const h = source.height;
   const canvas = document.createElement('canvas');
@@ -818,38 +827,73 @@ function enhancePalmCanvasForDisplay(source: HTMLCanvasElement) {
   const data = image.data;
   const n = w * h;
 
+  // 1. Limited gray-world white balance, so a genuinely warm scene is not flattened.
+  let sr = 0, sg = 0, sb = 0, counted = 0;
+  for (let i = 0; i < data.length; i += 16) {
+    const l = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    if (l < 25 || l > 235) continue;
+    sr += data[i]; sg += data[i + 1]; sb += data[i + 2]; counted++;
+  }
+  if (counted > 200) {
+    const mr = sr / counted, mg = sg / counted, mb = sb / counted;
+    // Skin is warm by nature: only remove ~40% of the cast, and cap each gain.
+    const target = (mr * 0.3 + mg * 0.4 + mb * 0.3) * 0.5 + mg * 0.5;
+    const clampGain = (g: number) => Math.max(0.92, Math.min(1.1, 1 + (g - 1) * 0.4));
+    const gr = clampGain(target / Math.max(1, mr));
+    const gb = clampGain(target / Math.max(1, mb));
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = Math.min(255, data[i] * gr);
+      data[i + 2] = Math.min(255, data[i + 2] * gb);
+    }
+  }
+
   const lum = new Float32Array(n);
   for (let i = 0, p = 0; i < data.length; i += 4, p++) {
     lum[p] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
   }
 
-  const equalized = claheLuma(lum, w, h);
+  // 2. Edge-preserving denoise: blur flat skin, keep strong edges as they were.
+  const soft = boxBlurChannel(boxBlurChannel(lum, w, h, 1), w, h, 1);
+  const denoised = new Float32Array(n);
+  for (let p = 0; p < n; p++) {
+    const edge = Math.abs(lum[p] - soft[p]);
+    const keep = smoothstep(5, 18, edge);
+    denoised[p] = soft[p] * (1 - keep) + lum[p] * keep;
+  }
 
-  // Fine radius sharpens the crease edge itself; the broad radius restores the tonal
-  // separation between a crease valley and the surrounding skin.
-  const fineRadius = Math.max(1, Math.round(Math.min(w, h) / 420));
-  const broadRadius = Math.max(3, Math.round(Math.min(w, h) / 110));
-  const fine = boxBlurChannel(equalized, w, h, fineRadius);
-  const broad = boxBlurChannel(equalized, w, h, broadRadius);
+  // 3. Gentle CLAHE blended with the denoised tones.
+  const equalized = claheLuma(denoised, w, h, 6, 8, 1.7);
+  const base = new Float32Array(n);
+  for (let p = 0; p < n; p++) base[p] = denoised[p] * 0.45 + equalized[p] * 0.55;
+
+  // 4. Crease sharpening above a noise floor. Fine radius defines the crease edge, the
+  //    broad radius restores tonal separation of the crease valley from the skin.
+  const fineRadius = Math.max(1, Math.round(Math.min(w, h) / 380));
+  const broadRadius = Math.max(4, Math.round(Math.min(w, h) / 90));
+  const fine = boxBlurChannel(base, w, h, fineRadius);
+  const broad = boxBlurChannel(base, w, h, broadRadius);
 
   for (let p = 0; p < n; p++) {
-    const base = equalized[p];
-    const target = Math.max(0, Math.min(255, base + (base - fine[p]) * 0.85 + (base - broad[p]) * 0.45));
+    const b = base[p];
+    const fineDiff = b - fine[p];
+    const broadDiff = b - broad[p];
+    const fineGain = 0.9 * smoothstep(1.2, 4.5, Math.abs(fineDiff));
+    // Dark valleys (negative broadDiff) are the creases: favour deepening those.
+    const broadGain = broadDiff < 0 ? 0.62 : 0.3;
+    const target = Math.max(0, Math.min(255, b + fineDiff * fineGain + broadDiff * broadGain));
     const original = lum[p];
     const i = p * 4;
     if (original < 1) {
       data[i] = data[i + 1] = data[i + 2] = target;
       continue;
     }
-    // Preserve hue by scaling RGB against the luminance change, with a mild pull
-    // toward neutral so the boosted contrast does not amplify chroma noise.
-    const ratio = target / original;
+    const ratio = Math.max(0.35, Math.min(2.4, target / original));
     for (let c = 0; c < 3; c++) {
-      data[i + c] = Math.max(0, Math.min(255, data[i + c] * ratio * 0.86 + target * 0.14));
+      data[i + c] = Math.max(0, Math.min(255, data[i + c] * ratio * 0.9 + target * 0.1));
     }
   }
   ctx.putImageData(image, 0, 0);
-  return canvas.toDataURL('image/jpeg', 0.95);
+  return canvas.toDataURL('image/jpeg', 0.93);
 }
 
 function makeCreaseCandidateCanvas(source: HTMLCanvasElement, thumbSide?: 'left' | 'right') {
@@ -1176,6 +1220,42 @@ function palmPathsFromVision(result: PalmResult): PalmPaths | null {
   }
 
   return Object.fromEntries(entries.map(e => [e.id, e.meta])) as PalmPaths;
+}
+
+const CV_LINE_LABELS: Record<PalmLineId, string> = {
+  heart_line: 'Heart Line',
+  head_line: 'Head Line',
+  life_line: 'Life Line',
+  fate_line: 'Fate Line'
+};
+
+// Immediate preview of the image-derived crease candidates. The slower vision analysis
+// replaces these as soon as it returns. They are drawn dashed, as "approximate", and
+// only for candidates that actually found a ridge in the photo - never a template.
+function palmPathsFromCv(candidates: PalmCvCandidate[]): PalmPaths | null {
+  const best = new Map<PalmLineId, PalmCvCandidate>();
+  for (const c of candidates) {
+    if (c.combinedScore < 0.34 || c.points.length < 4) continue;
+    const current = best.get(c.kind);
+    if (!current || c.combinedScore > current.combinedScore) best.set(c.kind, c);
+  }
+  if (!best.size) return null;
+  const entries = [...best.entries()].map(([id, c]) => {
+    const anchor = labelAnchorFor(c.points);
+    const meta: PalmPaths[PalmLineId] = {
+      label: CV_LINE_LABELS[id],
+      path: smoothPath(c.points),
+      labelX: Math.min(LABEL_SAFE.maxX, anchor.x + 2),
+      labelY: anchor.y - 2,
+      status: 'approximate'
+    };
+    return [id, meta] as [PalmLineId, PalmPaths[PalmLineId]];
+  });
+  const ordered = entries.map(([, meta]) => meta).sort((a, b) => a.labelY - b.labelY);
+  for (let i = 1; i < ordered.length; i++) {
+    if (ordered[i].labelY - ordered[i - 1].labelY < LABEL_MIN_GAP) ordered[i].labelY = ordered[i - 1].labelY + LABEL_MIN_GAP;
+  }
+  return Object.fromEntries(entries) as PalmPaths;
 }
 
 const MEDIAPIPE_VERSION = '0.10.22';
@@ -1640,7 +1720,10 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
       const activeTrack = streamRef.current?.getVideoTracks?.()[0];
       setStatus('Capturing palm from the live Agora video…');
       const agoraCapture = await capturePalmFromAgoraTrack(activeTrack, capturePoints, manualFallback, mirror);
-      const fused = fusePalmCanvases(candidates.slice(0, 3).map(c => c.canvas));
+      // Median of up to five frames removes most webcam sensor noise. Frames far below the
+      // best one (a focus hunt or motion blur) would only drag the median down, so skip them.
+      const usable = candidates.filter(c => c.quality.score >= best.quality.score * 0.82).slice(0, 5);
+      const fused = fusePalmCanvases((usable.length >= 3 ? usable : candidates.slice(0, 3)).map(c => c.canvas));
       const nativeSource = fused || best.canvas;
 
       // Single, high-quality resize from native crop pixels straight to the output
@@ -1669,7 +1752,9 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
       const cvCandidates = extractPalmCvCandidates(canvas, thumbSide
         ? { mask: palmPolygonFor(thumbSide), thumbSide }
         : undefined);
-      setPalmPaths(null);
+      // Show the image-derived crease candidates straight away so the capture never looks
+      // like a bare photo while the (slower) vision analysis runs; it replaces them.
+      setPalmPaths(palmPathsFromCv(cvCandidates));
       // The backend still analyzes the untouched raw frame (palmDataUrl); only what the
       // user sees is enhanced. This keeps vision analysis working from true pixel data
       // while compensating, for display purposes, for the softness inherent in a
