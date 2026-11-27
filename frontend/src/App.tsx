@@ -12,7 +12,7 @@ import { useAgoraSession, type AgentActivityState, type TranscriptEvent, type Ui
 import type { BirthProfile, ChartData, PalmResult, SceneName } from './types';
 import {
   birthSkyIntro, cosmicThreadIntro, detectScriptLanguage, isLocalizedNextSectionRequest, kundliIntro, localizedChapterRequest,
-  isLocalizedGuidanceRequest, localizedGuidanceKind, mentionsLocalizedKundliSubject,
+  hasLocalizedRemedyIntent, isLocalizedGuidanceRequest, localizedGuidanceKind, localizedGuidanceTopic, mentionsLocalizedKundliSubject,
   localizedPlanetMentions, nextLanguage, palmLineFallback, palmLineFromLocalizedText, palmOpening, palmRetakeMessage,
   palmistryIntro, placeNotFoundLine, sceneFromLocalizedTransition, stripQuotedText, transitionSentence,
   type LangCode
@@ -106,7 +106,8 @@ function buildDirectPlanetFallback(chart: ChartData, planetName: string) {
 
 function topicFromGuidanceRequest(text: string) {
   const match = text.match(/\b(business|career|marriage|relationship|health|education|study|finance|wealth|property|travel)\b/i);
-  return match ? match[1][0].toUpperCase() + match[1].slice(1).toLowerCase() : 'General';
+  if (match) return match[1][0].toUpperCase() + match[1].slice(1).toLowerCase();
+  return localizedGuidanceTopic(text) ?? 'General';
 }
 
 function isDirectKundliGuidanceRequest(text: string) {
@@ -449,7 +450,8 @@ function guidanceFromText(fullText: string, fallbackPlanets: string[] = []): Kun
   // guidance related to Venus or Mercury?" is an offer at the end of an ordinary Dasha
   // explanation; matching it opened the remedy panel before any remedy was discussed.
   const text = withoutSuggestionSentences(fullText);
-  const remedyIntent = /\b(remed(?:y|ies)|dosha|dosh|pooja|puja|mantra|gemstone|coral|sapphire|emerald|diamond|ruby|pearl|hessonite|cat(?:'s)? eye|fast(?:ing)?|donat(?:e|ion)|ritual|temple|worship|shanti|charity|seva|observance)\b/i.test(text);
+  const remedyIntent = /\b(remed(?:y|ies)|dosha|dosh|pooja|puja|mantra|gemstone|coral|sapphire|emerald|diamond|ruby|pearl|hessonite|cat(?:'s)? eye|fast(?:ing)?|donat(?:e|ion)|ritual|temple|worship|shanti|charity|seva|observance)\b/i.test(text)
+    || hasLocalizedRemedyIntent(text);
   if (!remedyIntent) return undefined;
 
   const dosha = detectDosha(text);
@@ -471,13 +473,12 @@ function guidanceFromText(fullText: string, fallbackPlanets: string[] = []): Kun
   // Navagraha. Keep the chart neutral and use a general guidance experience instead of
   // inventing Mercury, Jupiter, or whichever planet happened to be active previously.
   if (!planet) {
-    const topicMatch = text.match(/\b(business|career|marriage|relationship|health|education|study|finance|wealth|property|travel)\b/i);
-    const topic = topicMatch ? topicMatch[1][0].toUpperCase() + topicMatch[1].slice(1).toLowerCase() : 'General';
+    const topic = topicFromGuidanceRequest(text);
     const activeKind: KundliGuidance['activeKind'] = /\b(pooja|puja|temple|worship|ritual)\b/i.test(text) ? 'puja'
       : /\bmantra\b/i.test(text) ? 'mantra'
       : /\b(gemstone|coral|sapphire|emerald|diamond|ruby|pearl|hessonite|cat(?:'s)? eye)\b/i.test(text) ? 'gemstone'
       : /\b(fast(?:ing)?|donat(?:e|ion)|practice|charity|seva|observance)\b/i.test(text) ? 'practice'
-      : undefined;
+      : localizedGuidanceKind(text);
     return {
       planet: 'General',
       topic,
@@ -513,7 +514,7 @@ function guidanceFromText(fullText: string, fallbackPlanets: string[] = []): Kun
   collectFirst('gemstone', /\b(gemstone|coral|sapphire|emerald|diamond|ruby|pearl|hessonite|cat(?:'s)? eye)\b/i);
   collectFirst('practice', /\b(fast(?:ing)?|donat(?:e|ion)|practice|charity|seva|observance|tuesday|saturday|thursday|friday|monday|sunday|wednesday)\b/i);
   kindMatches.sort((a, b) => a.index - b.index);
-  const activeKind = explicit?.kind ?? kindMatches[0]?.kind;
+  const activeKind = explicit?.kind ?? kindMatches[0]?.kind ?? localizedGuidanceKind(currentText);
 
   // If the answer only confirms a supported dosha without discussing remedies yet,
   // keep the panel in assessment mode instead of prematurely showing all remedy cards.
@@ -533,6 +534,7 @@ function guidanceFromText(fullText: string, fallbackPlanets: string[] = []): Kun
     planet,
     doshaKey: dosha?.key,
     mode: 'remedies',
+    topic: topicFromGuidanceRequest(text) !== 'General' ? topicFromGuidanceRequest(text) : undefined,
     title: dosha ? `Traditional Guidance · ${dosha.label}` : `Traditional Guidance · ${planet}`,
     subtitle: 'Illustrative options synchronized with Jyotishi. These are traditional astrology practices, not guaranteed outcomes.',
     activeKind,

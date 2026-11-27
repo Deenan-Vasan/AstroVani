@@ -369,6 +369,26 @@ export function localizedGuidanceKind(text: string): LocalizedGuidanceKind | und
   return undefined;
 }
 
+/** Life-topic words (marriage, career, ...) as spoken in Hindi and Tamil; returns the English topic label. */
+export function localizedGuidanceTopic(text: string): string | undefined {
+  const topics: Array<[string, RegExp]> = [
+    ['Marriage', /(?:शादी|विवाह|वैवाहिक|दांपत्य|திருமண|கல்யாண|மணவாழ்க்கை|வாழ்க்கைத்\s*துணை)/u],
+    ['Relationship', /(?:रिश्ते|संबंध|प्रेम|உறவு|காதல்)/u],
+    ['Career', /(?:करियर|नौकरी|रोज़गार|रोजगार|தொழில்|வேலை|பணி)/u],
+    ['Business', /(?:व्यापार|व्यवसाय|வியாபார|வணிக)/u],
+    ['Health', /(?:स्वास्थ्य|सेहत|ஆரோக்கிய|உடல்நல)/u],
+    ['Education', /(?:शिक्षा|पढ़ाई|கல்வி|படிப்பு)/u],
+    ['Finance', /(?:धन|आर्थिक|पैसा|நிதி|பணவரவு|செல்வம்)/u],
+    ['Property', /(?:संपत्ति|जमीन|मकान|சொத்து|நிலம்)/u]
+  ];
+  return topics.find(([, pattern]) => pattern.test(text))?.[0];
+}
+
+/** Hindi/Tamil remedy vocabulary including dosha words, for detecting remedy talk in the agent's reply. */
+export function hasLocalizedRemedyIntent(text: string): boolean {
+  return isLocalizedGuidanceRequest(text) || /(?:दोष|தோஷ)/u.test(text);
+}
+
 /** Hindi/Tamil words for chart subjects (lagna, dasha, house, nakshatra, dosha, kundli). */
 export function mentionsLocalizedKundliSubject(text: string): boolean {
   return /(?:लग्न|दशा|भाव|नक्षत्र|राशि|कुंडली|कुण्डली|दोष|मांगलिक|कालसर्प|साढ़ेसाती|லக்ன|தசை|திசை|வீடு|நட்சத்திரம்|ராசி|ஜாதகம்|தோஷம்|செவ்வாய்\s*தோஷம்|காலசர்ப்ப|ஏழரை)/u.test(text);
