@@ -1,6 +1,11 @@
-import type { PalmResult } from '../types';
-
-type Line = PalmResult['lines'][number];
+type LineId = 'heart_line' | 'head_line' | 'life_line' | 'fate_line';
+type Line = {
+  id: LineId;
+  name: string;
+  status: 'detected' | 'approximate' | 'not_clear';
+  observation?: string;
+  points: Array<[number, number]>;
+};
 
 /** Straight-line span and the ratio of path length to that span (1 = straight). */
 function shape(points: Line['points']) {
@@ -74,5 +79,5 @@ export function palmLineSpecifics(line: Line): string | undefined {
     .filter(Boolean);
   const reading = meanings.length ? ` In palmistry this is ${meanings.join('; ')}.` : '';
   const morphology = line.observation && line.observation !== 'indeterminate' ? ` It looks ${line.observation}.` : '';
-  return `Your ${line.name.toLowerCase()} traces as ${parts.join(', ')}.${morphology}${reading}`;
+  return `Your ${line.name.toLowerCase()} ${line.status === 'approximate' ? 'appears' : 'traces'} as ${parts.join(', ')}.${morphology}${reading}`;
 }
