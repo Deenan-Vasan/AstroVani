@@ -3,7 +3,7 @@ import { FilesetResolver, HandLandmarker, type NormalizedLandmark } from '@media
 import { analyzePalm } from '../api';
 import type { PalmResult } from '../types';
 import type { ICameraVideoTrack } from 'agora-rtc-sdk-ng';
-import { extractPalmCvCandidates } from './palmCv';
+import { extractPalmCvCandidates, type PalmCvCandidate } from './palmCv';
 
 export type PalmLineId = 'heart_line' | 'head_line' | 'life_line' | 'fate_line';
 
@@ -55,7 +55,8 @@ type CameraInfo = {
 };
 
 const EMPTY_QUALITY: CameraQuality = { brightness: 0, sharpness: 0, lightingOkay: false, focusOkay: false, score: 0 };
-const GUIDE = { left: 0.19, right: 0.81, top: 0.07, bottom: 0.93 };
+// Slightly wider than the drawn guide: it is a framing aid, not a hard border.
+const GUIDE = { left: 0.14, right: 0.86, top: 0.04, bottom: 0.97 };
 
 function normalizePalmLine(name: string): PalmLineId | undefined {
   const normalized = name.trim().toLowerCase().replace(/\s+/g, '_');
@@ -84,13 +85,13 @@ function validatePalm(points: NormalizedLandmark[], previousCenter?: { x: number
   const area = width * height;
   const center = { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
   const insideGuide = b.minX > GUIDE.left && b.maxX < GUIDE.right && b.minY > GUIDE.top && b.maxY < GUIDE.bottom;
-  const sizeOkay = area > 0.13 && area < 0.47 && height > 0.5;
+  const sizeOkay = area > 0.09 && area < 0.56 && height > 0.4;
 
   // Require four fingers to look extended relative to their MCP joints. This rejects fists
   // and most non-palm captures without pretending to identify palm creases.
   const wrist = points[0];
   const fingerPairs: Array<[number, number]> = [[8, 5], [12, 9], [16, 13], [20, 17]];
-  const extended = fingerPairs.filter(([tip, mcp]) => distance(points[tip], wrist) > distance(points[mcp], wrist) * 1.22).length;
+  const extended = fingerPairs.filter(([tip, mcp]) => distance(points[tip], wrist) > distance(points[mcp], wrist) * 1.12).length;
   const openPalm = extended >= 3;
 
   // Keep the wrist-to-middle-finger axis reasonably vertical so the normalized crop is stable.
@@ -98,14 +99,14 @@ function validatePalm(points: NormalizedLandmark[], previousCenter?: { x: number
   const dx = middleMcp.x - wrist.x;
   const dy = middleMcp.y - wrist.y;
   const angleFromVertical = Math.abs(Math.atan2(dx, -dy) * 180 / Math.PI);
-  const upright = angleFromVertical < 32;
+  const upright = angleFromVertical < 40;
 
-  const steady = previousCenter ? Math.hypot(center.x - previousCenter.x, center.y - previousCenter.y) < 0.035 : false;
+  const steady = previousCenter ? Math.hypot(center.x - previousCenter.x, center.y - previousCenter.y) < 0.055 : false;
   const ready = insideGuide && sizeOkay && openPalm && upright && steady;
 
   let message = 'Palm ready ✓ · hold steady and capture';
   if (!insideGuide) message = 'Move your palm fully inside the highlighted area';
-  else if (!sizeOkay && area <= 0.13) message = 'Move your palm closer to the camera';
+  else if (!sizeOkay && area <= 0.09) message = 'Move your palm closer to the camera';
   else if (!sizeOkay) message = 'Move your palm slightly farther from the camera';
   else if (!openPalm) message = 'Open your fingers and face your palm toward the camera';
   else if (!upright) message = 'Keep your palm upright';
@@ -447,10 +448,10 @@ function measureCanvasQuality(source: HTMLCanvasElement): CameraQuality {
   const sharpness = edgeCount ? edgeSum / edgeCount : 0;
   const darkRatio = dark / lum.length;
   const blownRatio = blown / lum.length;
-  const lightingOkay = brightness >= 55 && brightness <= 215 && darkRatio < 0.18 && blownRatio < 0.18;
+  const lightingOkay = brightness >= 45 && brightness <= 225 && darkRatio < 0.26 && blownRatio < 0.26;
   // Mean two-axis local edge energy. A close, out-of-focus webcam palm usually falls
   // below ~6, while readable skin creases typically produce >7-8 on this 180x225 probe.
-  const focusOkay = sharpness >= 6.0;
+  const focusOkay = sharpness >= 5.0;
   const focusScore = Math.max(0, Math.min(1, (sharpness - 3.5) / 8.5));
   const lightScore = Math.max(0, 1 - Math.abs(brightness - 135) / 125) * (1 - Math.min(0.8, darkRatio + blownRatio));
   return { brightness, sharpness, lightingOkay, focusOkay, score: focusScore * 0.68 + lightScore * 0.32 };
@@ -573,8 +574,8 @@ function fusePalmCanvases(frames: HTMLCanvasElement[]) {
   if (!out) return frames[0];
 
   // Median fusion keeps crease edges from the sharpest frames while rejecting single-frame
-  // sensor noise. We only fuse the best three frames, captured within a very short burst.
-  const sample = frames.slice(0, 3).map(frame => {
+  // sensor noise. We fuse up to the best five frames, captured within a very short burst.
+  const sample = frames.slice(0, 5).map(frame => {
     const ctx = frame.getContext('2d', { willReadFrequently: true });
     return ctx?.getImageData(0, 0, width, height);
   }).filter(Boolean) as ImageData[];
@@ -801,11 +802,20 @@ function claheLuma(lum: Float32Array, w: number, h: number, tilesX = 8, tilesY =
   return out;
 }
 
+function smoothstep(edge0: number, edge1: number, x: number) {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
 function enhancePalmCanvasForDisplay(source: HTMLCanvasElement) {
-  // Display-only enhancement: CLAHE for local crease contrast, then a multi-scale
-  // unsharp mask. Keeps full color (unlike the grayscale analysis enhancement) and
-  // recovers the crease definition that a cropped, upscaled camera frame loses. The
-  // image sent to the backend for vision analysis is untouched by this function.
+  // Display-only enhancement. The previous version ran strong CLAHE and a hard unsharp
+  // mask straight on the noisy, upscaled webcam crop, which amplified sensor noise and
+  // JPEG blocks into a gritty, over-contrasty picture. The order here is deliberately:
+  //   1. neutralise the colour cast and normalise exposure (dim/dark-toned palms),
+  //   2. denoise the luminance so there is nothing noisy to amplify,
+  //   3. gentle CLAHE, blended with the denoised tones so skin stays natural,
+  //   4. crease-aware sharpening that only boosts real edges above the noise floor.
+  // The image sent to the backend for vision analysis is untouched by this function.
   const w = source.width;
   const h = source.height;
   const canvas = document.createElement('canvas');
@@ -818,38 +828,118 @@ function enhancePalmCanvasForDisplay(source: HTMLCanvasElement) {
   const data = image.data;
   const n = w * h;
 
+  // 1. Limited gray-world white balance, so a genuinely warm scene is not flattened.
+  let sr = 0, sg = 0, sb = 0, counted = 0;
+  for (let i = 0; i < data.length; i += 16) {
+    const l = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    if (l < 25 || l > 235) continue;
+    sr += data[i]; sg += data[i + 1]; sb += data[i + 2]; counted++;
+  }
+  if (counted > 200) {
+    const mr = sr / counted, mg = sg / counted, mb = sb / counted;
+    // Skin is warm by nature: only remove ~40% of the cast, and cap each gain.
+    const target = (mr * 0.3 + mg * 0.4 + mb * 0.3) * 0.5 + mg * 0.5;
+    const clampGain = (g: number) => Math.max(0.92, Math.min(1.1, 1 + (g - 1) * 0.4));
+    const gr = clampGain(target / Math.max(1, mr));
+    const gb = clampGain(target / Math.max(1, mb));
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = Math.min(255, data[i] * gr);
+      data[i + 2] = Math.min(255, data[i + 2] * gb);
+    }
+  }
+
+  // 1b. Auto-exposure, only for a genuinely dark palm. A dim or darker-toned hand leaves
+  //     every crease at the bottom of the histogram, so CLAHE alone only makes it muddy.
+  //     A frame that is already well exposed (including a bright background behind the
+  //     hand) is left alone: stretching it just clips highlights and crushes shadows.
+  {
+    const hist = new Uint32Array(256);
+    let samples = 0;
+    for (let y = Math.floor(h * 0.3); y < Math.floor(h * 0.8); y += 3) {
+      for (let x = Math.floor(w * 0.3); x < Math.floor(w * 0.7); x += 3) {
+        const i = (y * w + x) * 4;
+        hist[Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2])]++;
+        samples++;
+      }
+    }
+    const percentile = (q: number) => {
+      let acc = 0;
+      for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= samples * q) return v; }
+      return 255;
+    };
+    const med = percentile(0.5);
+    if (med < 105) {
+      const hi = Math.max(percentile(0.985), 150);
+      const gamma = Math.max(0.6, Math.min(1, Math.log(0.46) / Math.log(Math.max(0.12, med / hi))));
+      const lut = new Uint8ClampedArray(256);
+      for (let v = 0; v < 256; v++) lut[v] = 255 * Math.pow(Math.min(1, v / hi), gamma);
+      for (let i = 0; i < data.length; i += 4) {
+        data[i] = lut[data[i]]; data[i + 1] = lut[data[i + 1]]; data[i + 2] = lut[data[i + 2]];
+      }
+    }
+  }
+
   const lum = new Float32Array(n);
   for (let i = 0, p = 0; i < data.length; i += 4, p++) {
     lum[p] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
   }
 
-  const equalized = claheLuma(lum, w, h);
+  // 2. Edge-preserving denoise: blur flat skin, keep strong edges as they were. The
+  //    thresholds follow the measured noise level, because brightening a dim frame
+  //    multiplies its sensor noise and a fixed threshold would let it through.
+  let soft = boxBlurChannel(boxBlurChannel(lum, w, h, 1), w, h, 1);
+  const noiseSamples: number[] = [];
+  for (let p = 0; p < n; p += 11) noiseSamples.push(Math.abs(lum[p] - soft[p]));
+  noiseSamples.sort((a, b) => a - b);
+  const sigma = (noiseSamples[Math.floor(noiseSamples.length / 2)] || 0) * 1.4826;
+  if (sigma > 3.2) soft = boxBlurChannel(boxBlurChannel(soft, w, h, 2), w, h, 1);
+  const edgeLow = Math.max(5, sigma * 2.6);
+  const edgeHigh = Math.max(18, sigma * 7);
+  const denoised = new Float32Array(n);
+  for (let p = 0; p < n; p++) {
+    const edge = Math.abs(lum[p] - soft[p]);
+    const keep = smoothstep(edgeLow, edgeHigh, edge);
+    denoised[p] = soft[p] * (1 - keep) + lum[p] * keep;
+  }
 
-  // Fine radius sharpens the crease edge itself; the broad radius restores the tonal
-  // separation between a crease valley and the surrounding skin.
-  const fineRadius = Math.max(1, Math.round(Math.min(w, h) / 420));
-  const broadRadius = Math.max(3, Math.round(Math.min(w, h) / 110));
-  const fine = boxBlurChannel(equalized, w, h, fineRadius);
-  const broad = boxBlurChannel(equalized, w, h, broadRadius);
+  // 3. Gentle CLAHE blended with the denoised tones.
+  const equalized = claheLuma(denoised, w, h, 6, 8, 1.4);
+  const base = new Float32Array(n);
+  for (let p = 0; p < n; p++) base[p] = denoised[p] * 0.7 + equalized[p] * 0.3;
+
+  // 4. Crease sharpening above a noise floor. Fine radius defines the crease edge, the
+  //    broad radius restores tonal separation of the crease valley from the skin.
+  const fineRadius = Math.max(1, Math.round(Math.min(w, h) / 380));
+  const broadRadius = Math.max(4, Math.round(Math.min(w, h) / 90));
+  const fine = boxBlurChannel(base, w, h, fineRadius);
+  const broad = boxBlurChannel(base, w, h, broadRadius);
 
   for (let p = 0; p < n; p++) {
-    const base = equalized[p];
-    const target = Math.max(0, Math.min(255, base + (base - fine[p]) * 0.85 + (base - broad[p]) * 0.45));
+    const b = base[p];
+    const fineDiff = b - fine[p];
+    const broadDiff = b - broad[p];
+    const fineGain = 0.9 * smoothstep(1.2 + sigma * 0.5, 4.5 + sigma * 1.2, Math.abs(fineDiff));
+    // Dark valleys (negative broadDiff) are the creases: favour deepening those.
+    const broadGain = broadDiff < 0 ? 0.4 : 0.12;
+    // Cap the boost so strong silhouette edges (hand against background) cannot grow
+    // bright halos; real creases need far less than this.
+    const boost = Math.max(-16, Math.min(9, fineDiff * fineGain + broadDiff * broadGain));
+    const target = Math.max(0, Math.min(255, b + boost));
     const original = lum[p];
     const i = p * 4;
     if (original < 1) {
       data[i] = data[i + 1] = data[i + 2] = target;
       continue;
     }
-    // Preserve hue by scaling RGB against the luminance change, with a mild pull
-    // toward neutral so the boosted contrast does not amplify chroma noise.
-    const ratio = target / original;
+    // Apply only the luminance change to each channel, so the skin keeps its natural
+    // colour instead of being multiplied into oversaturated orange.
+    const delta = target - original;
     for (let c = 0; c < 3; c++) {
-      data[i + c] = Math.max(0, Math.min(255, data[i + c] * ratio * 0.86 + target * 0.14));
+      data[i + c] = Math.max(0, Math.min(255, data[i + c] + delta));
     }
   }
   ctx.putImageData(image, 0, 0);
-  return canvas.toDataURL('image/jpeg', 0.95);
+  return canvas.toDataURL('image/jpeg', 0.93);
 }
 
 function makeCreaseCandidateCanvas(source: HTMLCanvasElement, thumbSide?: 'left' | 'right') {
@@ -1178,6 +1268,53 @@ function palmPathsFromVision(result: PalmResult): PalmPaths | null {
   return Object.fromEntries(entries.map(e => [e.id, e.meta])) as PalmPaths;
 }
 
+const CV_LINE_LABELS: Record<PalmLineId, string> = {
+  heart_line: 'Heart Line',
+  head_line: 'Head Line',
+  life_line: 'Life Line',
+  fate_line: 'Fate Line'
+};
+
+// Immediate preview of the image-derived crease candidates. The slower vision analysis
+// replaces these as soon as it returns. They are drawn dashed, as "approximate", and
+// only for candidates that actually found a ridge in the photo - never a template.
+function palmPathsFromCv(candidates: PalmCvCandidate[]): PalmPaths | null {
+  const best = new Map<PalmLineId, PalmCvCandidate>();
+  for (const c of candidates) {
+    if (c.combinedScore < 0.34 || c.points.length < 4) continue;
+    const current = best.get(c.kind);
+    if (!current || c.combinedScore > current.combinedScore) best.set(c.kind, c);
+  }
+  // Two different lines cannot follow the same crease. When the heart and head
+  // candidates have latched onto one ridge, keep only the better-scoring one.
+  const heart = best.get('heart_line');
+  const head = best.get('head_line');
+  if (heart && head) {
+    const near = (a: Array<[number, number]>, b: Array<[number, number]>) =>
+      a.filter(([ax, ay]) => b.some(([bx, by]) => Math.hypot(ax - bx, ay - by) < 0.04)).length / a.length;
+    if (Math.max(near(heart.points, head.points), near(head.points, heart.points)) > 0.35) {
+      best.delete(heart.combinedScore >= head.combinedScore ? 'head_line' : 'heart_line');
+    }
+  }
+  if (!best.size) return null;
+  const entries = [...best.entries()].map(([id, c]) => {
+    const anchor = labelAnchorFor(c.points);
+    const meta: PalmPaths[PalmLineId] = {
+      label: CV_LINE_LABELS[id],
+      path: smoothPath(c.points),
+      labelX: Math.min(LABEL_SAFE.maxX, anchor.x + 2),
+      labelY: anchor.y - 2,
+      status: 'approximate'
+    };
+    return [id, meta] as [PalmLineId, PalmPaths[PalmLineId]];
+  });
+  const ordered = entries.map(([, meta]) => meta).sort((a, b) => a.labelY - b.labelY);
+  for (let i = 1; i < ordered.length; i++) {
+    if (ordered[i].labelY - ordered[i - 1].labelY < LABEL_MIN_GAP) ordered[i].labelY = ordered[i - 1].labelY + LABEL_MIN_GAP;
+  }
+  return Object.fromEntries(entries) as PalmPaths;
+}
+
 const MEDIAPIPE_VERSION = '0.10.22';
 const MODEL_CDN_URL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 // The file FilesetResolver actually requests from the WASM root. Kept in sync with
@@ -1295,6 +1432,12 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
   const lastValidLandmarksRef = useRef<NormalizedLandmark[]>([]);
   const lastValidLandmarkAtRef = useRef(0);
   const readySinceRef = useRef<number | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const countdownStartRef = useRef<number | null>(null);
+  const lastEnabledAtRef = useRef(0);
+  const lastCaptureAttemptRef = useRef(0);
+  const captureEnabledRef = useRef(false);
+  const captureFnRef = useRef<() => Promise<void>>(async () => undefined);
   const lastQualityCheckRef = useRef(0);
   const cameraQualityRef = useRef<CameraQuality>(EMPTY_QUALITY);
   const mirrorCameraRef = useRef(true);
@@ -1325,12 +1468,52 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
   ] as Array<[string, boolean]>, [validation, cameraQuality]);
 
   const cameraReady = cameraQuality.focusOkay && cameraQuality.lightingOkay;
+  // The photo is already on screen while the crease candidates are extracted and the
+  // vision analysis runs (a few seconds). isBurstCapturing stays true for that whole time
+  // and is cleared in the same step that writes the final "guides mapped" status.
+  const analyzing = !!capturedPalm && isBurstCapturing;
   // Capture now REQUIRES a working hand detector. Without landmarks there is no palm
   // rectification, no palm mask and no anatomical frame, so any lines produced are
   // guesses dressed up with confidence percentages - the hand's own silhouette gets
   // reported as a Life line. Declining to capture is more honest than that.
   const captureEnabled = !!stream && !isBurstCapturing
     && detectorStatus === 'ready' && validation.ready && cameraReady;
+
+  captureEnabledRef.current = captureEnabled;
+  captureFnRef.current = capture;
+
+  // Auto-capture: once every check passes, count down 3 seconds on screen and capture by
+  // itself. A single dropped detection frame must not restart the count, so it is only
+  // cancelled after the checks have stayed unsatisfied for 0.7s. After a refused capture
+  // (too soft or too dark) it waits a moment before arming again.
+  useEffect(() => {
+    if (capturedPalm || !stream) {
+      countdownStartRef.current = null;
+      setCountdown(null);
+      return;
+    }
+    const COUNTDOWN_MS = 3000;
+    const id = window.setInterval(() => {
+      const now = performance.now();
+      if (captureEnabledRef.current && now - lastCaptureAttemptRef.current > 2500) {
+        lastEnabledAtRef.current = now;
+        countdownStartRef.current ??= now;
+        const left = Math.ceil((COUNTDOWN_MS - (now - countdownStartRef.current)) / 1000);
+        if (left <= 0) {
+          countdownStartRef.current = null;
+          setCountdown(null);
+          lastCaptureAttemptRef.current = now;
+          void captureFnRef.current();
+        } else {
+          setCountdown(prev => (prev === left ? prev : left));
+        }
+      } else if (countdownStartRef.current !== null && now - lastEnabledAtRef.current > 700) {
+        countdownStartRef.current = null;
+        setCountdown(null);
+      }
+    }, 150);
+    return () => window.clearInterval(id);
+  }, [capturedPalm, stream]);
 
   async function ensureDetector() {
     if (detectorRef.current) return detectorRef.current;
@@ -1421,7 +1604,7 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
 
             if (next.ready) {
               readySinceRef.current ??= now;
-              if (now - readySinceRef.current < 500) {
+              if (now - readySinceRef.current < 250) {
                 next.ready = false;
                 next.message = 'Great position · hold steady…';
               }
@@ -1624,10 +1807,12 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
       const best = candidates[0];
       if (!best) throw new Error('No camera frame was available.');
 
-      if (!best.quality.lightingOkay || !best.quality.focusOkay) {
+      // The live gate (sharpness 5.0) already passed; only refuse here for clearly bad frames.
+      if (best.quality.brightness < 38 || best.quality.brightness > 232 || best.quality.sharpness < 4.2) {
         setCameraQuality(best.quality);
         cameraQualityRef.current = best.quality;
-        setStatus(!best.quality.focusOkay
+        lastCaptureAttemptRef.current = performance.now();
+        setStatus(best.quality.sharpness < 4.2
           ? 'Capture paused · move slightly farther from the lens and hold steady for sharper focus'
           : 'Capture paused · use brighter, even light and avoid glare on the palm');
         setIsBurstCapturing(false);
@@ -1640,7 +1825,10 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
       const activeTrack = streamRef.current?.getVideoTracks?.()[0];
       setStatus('Capturing palm from the live Agora video…');
       const agoraCapture = await capturePalmFromAgoraTrack(activeTrack, capturePoints, manualFallback, mirror);
-      const fused = fusePalmCanvases(candidates.slice(0, 3).map(c => c.canvas));
+      // Median of up to five frames removes most webcam sensor noise. Frames far below the
+      // best one (a focus hunt or motion blur) would only drag the median down, so skip them.
+      const usable = candidates.filter(c => c.quality.score >= best.quality.score * 0.82).slice(0, 5);
+      const fused = fusePalmCanvases((usable.length >= 3 ? usable : candidates.slice(0, 3)).map(c => c.canvas));
       const nativeSource = fused || best.canvas;
 
       // Single, high-quality resize from native crop pixels straight to the output
@@ -1669,7 +1857,9 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
       const cvCandidates = extractPalmCvCandidates(canvas, thumbSide
         ? { mask: palmPolygonFor(thumbSide), thumbSide }
         : undefined);
-      setPalmPaths(null);
+      // Show the image-derived crease candidates straight away so the capture never looks
+      // like a bare photo while the (slower) vision analysis runs; it replaces them.
+      setPalmPaths(palmPathsFromCv(cvCandidates));
       // The backend still analyzes the untouched raw frame (palmDataUrl); only what the
       // user sees is enhanced. This keeps vision analysis working from true pixel data
       // while compensating, for display purposes, for the softness inherent in a
@@ -1740,12 +1930,22 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
       <div className="scene-copy">
         <div className="eyebrow">CHAPTER 04 · YOUR COSMIC IMPRINT</div>
         <h2>The sky is one map. Your palm is another.</h2>
-        <p>Position one open palm inside the guided window. Capture is enabled only when the hand is visible, centered, open, upright and steady.</p>
+        <p>Hold one open palm inside the guided window. When everything is ready it captures automatically after a 3-second countdown.</p>
       </div>
       <div className="palm-layout">
         <div className={`camera-stage glass-panel ${capturedPalm ? 'captured' : ''} ${stream ? 'validating' : ''} ${validation.ready ? 'palm-ready' : ''}`}>
           {!capturedPalm && <video ref={videoRef} className={mirrorCameraRef.current ? '' : 'camera-native'} autoPlay playsInline muted />}
           {capturedPalm && <img className="captured-palm" src={capturedPalm} alt="Normalized captured palm" />}
+          {analyzing && (
+            <div className="palm-analyzing" role="status" aria-live="polite">
+              <div className="palm-scan-line" aria-hidden="true" />
+              <div className="palm-analyzing-card">
+                <span className="palm-spinner" aria-hidden="true" />
+                <strong>Reading your palm lines…</strong>
+                <small>Finding the creases and mapping the guides · this takes a few seconds</small>
+              </div>
+            </div>
+          )}
           {!stream && !capturedPalm && <div className="camera-placeholder">✋<span>Open the palm camera to begin</span></div>}
 
           {!capturedPalm && stream && (
@@ -1757,8 +1957,9 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
                 {cameraInfo && <small>{cameraInfo.width || 'Auto'}×{cameraInfo.height || 'Auto'}{cameraInfo.continuousFocus ? ' · AF' : ''}</small>}
               </div>
               <div className={`hand-guide ${validation.ready && cameraReady ? 'ready' : ''}`}>
-                <div className="palm-guide-copy"><strong>{validation.ready && cameraReady ? 'Palm ready ✓' : validation.ready ? 'Hold for focus…' : 'Place palm here'}</strong><span>Fingers open · palm upright</span></div>
+                <div className="palm-guide-copy"><strong>{countdown !== null ? `Capturing in ${countdown}…` : validation.ready && cameraReady ? 'Palm ready ✓' : validation.ready ? 'Hold for focus…' : 'Place palm here'}</strong><span>{countdown !== null ? 'Hold still · move your hand to cancel' : 'Fingers open · palm upright'}</span></div>
               </div>
+              {countdown !== null && <div className="palm-countdown" key={countdown} aria-live="assertive"><span>{countdown}</span></div>}
               <div className="palm-readiness" aria-live="polite">
                 {readiness.map(([label, ok]) => <span key={label} className={ok ? 'ok' : ''}>{ok ? '✓' : '○'} {label}</span>)}
               </div>
@@ -1800,7 +2001,7 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
             </button>
           )}
 
-          <div className={`camera-status ${captureEnabled ? 'ready' : ''}`}><span className="live-dot" /> {status}</div>
+          <div className={`camera-status ${captureEnabled ? 'ready' : ''}`}>{analyzing ? <span className="palm-spinner small" aria-hidden="true" /> : <span className="live-dot" />} {status}</div>
           <div className="camera-actions">
             <button className="ghost-btn" onClick={startCamera}>{capturedPalm ? 'Retake Palm' : 'Open Palm Camera'}</button>
             {!capturedPalm && <button className="primary-btn" onClick={capture} disabled={!captureEnabled}>{isBurstCapturing ? 'Selecting Best Frame…' : 'Capture Palm'}</button>}
@@ -1839,7 +2040,9 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
               </div>;
             })}</div>
             <div className="disclaimer">Traditional palmistry-style demo only. MediaPipe is used for capture validation/cropping when available. After capture, a vision model traces visually discernible major creases and returns normalized coordinates used to draw the guides. Clear traces are drawn solid; moderate-confidence traces are drawn as approximate dashed guides. Where no crease could be traced, a dotted <em>estimated</em> guide is placed from hand-landmark geometry — that guide reflects typical palm anatomy, not a crease observed in your photograph. These are approximate visual annotations, not medical, biometric or scientific measurements.</div>
-          </> : <div className="empty-result">Capture a validated palm to populate the synchronized interpretation panel.</div>}
+          </> : analyzing
+            ? <div className="empty-result analyzing-result"><span className="palm-spinner" aria-hidden="true" />Analyzing your palm… the line readings will appear here.</div>
+            : <div className="empty-result">Capture a validated palm to populate the synchronized interpretation panel.</div>}
         </div>
       </div>
       <button className="primary-btn scene-next" onClick={onNext}>Open the Cosmic Thread →</button>

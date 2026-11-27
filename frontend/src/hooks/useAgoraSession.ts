@@ -295,7 +295,7 @@ export function useAgoraSession(
     }
   }, [processMessage]);
 
-  const speak = useCallback(async (text: string, options?: { interruptable?: boolean }) => {
+  const speak = useCallback(async (text: string, options?: { interruptable?: boolean; priority?: 'INTERRUPT' | 'APPEND' | 'IGNORE' }) => {
     const id = agentIdRef.current;
     const normalized = text.trim();
     if (!id || !normalized) return;
@@ -304,7 +304,7 @@ export function useAgoraSession(
     // transcription before the HTTP /speak call resolves.
     const syntheticKey = rememberRecentUtterance(syntheticSpeakRef.current, normalized, 20000);
     try {
-      await speakAgoraAgent(id, normalized, options?.interruptable ?? true);
+      await speakAgoraAgent(id, normalized, options?.interruptable ?? true, options?.priority);
     } catch (error) {
       removeRecentUtterance(syntheticSpeakRef.current, syntheticKey);
       throw error;

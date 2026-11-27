@@ -369,6 +369,26 @@ export function localizedGuidanceKind(text: string): LocalizedGuidanceKind | und
   return undefined;
 }
 
+/** Life-topic words (marriage, career, ...) as spoken in Hindi and Tamil; returns the English topic label. */
+export function localizedGuidanceTopic(text: string): string | undefined {
+  const topics: Array<[string, RegExp]> = [
+    ['Marriage', /(?:शादी|विवाह|वैवाहिक|दांपत्य|திருமண|கல்யாண|மணவாழ்க்கை|வாழ்க்கைத்\s*துணை)/u],
+    ['Relationship', /(?:रिश्ते|संबंध|प्रेम|உறவு|காதல்)/u],
+    ['Career', /(?:करियर|नौकरी|रोज़गार|रोजगार|தொழில்|வேலை|பணி)/u],
+    ['Business', /(?:व्यापार|व्यवसाय|வியாபார|வணிக)/u],
+    ['Health', /(?:स्वास्थ्य|सेहत|ஆரோக்கிய|உடல்நல)/u],
+    ['Education', /(?:शिक्षा|पढ़ाई|கல்வி|படிப்பு)/u],
+    ['Finance', /(?:धन|आर्थिक|पैसा|நிதி|பணவரவு|செல்வம்)/u],
+    ['Property', /(?:संपत्ति|जमीन|मकान|சொத்து|நிலம்)/u]
+  ];
+  return topics.find(([, pattern]) => pattern.test(text))?.[0];
+}
+
+/** Hindi/Tamil remedy vocabulary including dosha words, for detecting remedy talk in the agent's reply. */
+export function hasLocalizedRemedyIntent(text: string): boolean {
+  return isLocalizedGuidanceRequest(text) || /(?:दोष|தோஷ)/u.test(text);
+}
+
 /** Hindi/Tamil words for chart subjects (lagna, dasha, house, nakshatra, dosha, kundli). */
 export function mentionsLocalizedKundliSubject(text: string): boolean {
   return /(?:लग्न|दशा|भाव|नक्षत्र|राशि|कुंडली|कुण्डली|दोष|मांगलिक|कालसर्प|साढ़ेसाती|லக்ன|தசை|திசை|வீடு|நட்சத்திரம்|ராசி|ஜாதகம்|தோஷம்|செவ்வாய்\s*தோஷம்|காலசர்ப்ப|ஏழரை)/u.test(text);
@@ -423,6 +443,25 @@ export function palmistryIntro(lang: LangCode): string {
     return 'கைரேகை இப்போது திறந்துள்ளது. தயவுசெய்து பாம் கேமராவைத் திறந்து, ஒரு திறந்த உள்ளங்கையை வழிகாட்டிக்குள் வைத்து, அது நடுவில், நேராக, அசையாமல் இருக்கும்போது படம் எடுக்கவும். அதன் பிறகு இதய ரேகை, தலை ரேகை, ஆயுள் ரேகை, விதி ரேகை ஆகியவற்றை ஒவ்வொன்றாகப் பார்ப்போம்.';
   }
   return 'Palmistry is now open. Please open the Palm Camera, place one open palm inside the guide, and capture your palm when it is centered, upright, and steady. After the capture, I can guide you through the Heart line, Head line, Life line, and Fate line step by step.';
+}
+
+/** Spoken when the birth place could not be found, so no chart was made. Never name a chart that is not theirs. */
+export function placeNotFoundLine(place: string | undefined, lang: LangCode): string {
+  const t = translatedLang(lang);
+  const named = place?.trim();
+  if (t === 'hi') {
+    return named
+      ? `मुझे "${named}" जगह नहीं मिल पाई। क्या आप पास का कोई बड़ा शहर या ज़िला बता सकते हैं?`
+      : 'मैं अभी आपकी कुंडली तैयार नहीं कर पाया। कृपया अपना जन्म स्थान फिर से बताइए, या पास का कोई बड़ा शहर बताइए।';
+  }
+  if (t === 'ta') {
+    return named
+      ? `"${named}" என்ற இடத்தை என்னால் கண்டுபிடிக்க முடியவில்லை. அருகிலுள்ள ஒரு பெரிய நகரம் அல்லது மாவட்டத்தைச் சொல்ல முடியுமா?`
+      : 'இப்போது உங்கள் ஜாதகத்தைத் தயாரிக்க முடியவில்லை. உங்கள் பிறந்த இடத்தை மீண்டும் சொல்லுங்கள், அல்லது அருகிலுள்ள பெரிய நகரத்தைச் சொல்லுங்கள்.';
+  }
+  return named
+    ? `I could not find "${named}" on my map, so I cannot make your chart yet. Could you tell me a larger town or the district nearby?`
+    : 'I could not prepare your chart just now. Please tell me your birth place again, or a larger town nearby.';
 }
 
 export function cosmicThreadIntro(lang: LangCode): string {
