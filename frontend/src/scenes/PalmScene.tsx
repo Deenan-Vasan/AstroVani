@@ -810,7 +810,7 @@ function enhancePalmCanvasForDisplay(source: HTMLCanvasElement) {
   // Display-only enhancement. The previous version ran strong CLAHE and a hard unsharp
   // mask straight on the noisy, upscaled webcam crop, which amplified sensor noise and
   // JPEG blocks into a gritty, over-contrasty picture. The order here is deliberately:
-  //   1. neutralise the colour cast (webcam skin often goes orange/red),
+  //   1. neutralise the colour cast and normalise exposure (dim/dark-toned palms),
   //   2. denoise the luminance so there is nothing noisy to amplify,
   //   3. gentle CLAHE, blended with the denoised tones so skin stays natural,
   //   4. crease-aware sharpening that only boosts real edges above the noise floor.
@@ -847,17 +847,58 @@ function enhancePalmCanvasForDisplay(source: HTMLCanvasElement) {
     }
   }
 
+  // 1b. Auto-exposure. A dimly lit or darker-toned palm leaves every crease in the
+  //     bottom of the histogram, so CLAHE can only make it muddy. Stretch the levels
+  //     from the palm area (central region) and lift the midtones towards mid-grey.
+  {
+    const hist = new Uint32Array(256);
+    let samples = 0;
+    for (let y = Math.floor(h * 0.2); y < Math.floor(h * 0.85); y += 3) {
+      for (let x = Math.floor(w * 0.2); x < Math.floor(w * 0.8); x += 3) {
+        const i = (y * w + x) * 4;
+        hist[Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2])]++;
+        samples++;
+      }
+    }
+    const percentile = (q: number) => {
+      let acc = 0;
+      for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= samples * q) return v; }
+      return 255;
+    };
+    const lo = percentile(0.02);
+    const hi = Math.max(lo + 40, percentile(0.985));
+    const med = percentile(0.5);
+    const medN = Math.max(0.05, Math.min(0.95, (med - lo) / (hi - lo)));
+    const gamma = Math.max(0.55, Math.min(1.1, Math.log(0.5) / Math.log(medN)));
+    const lut = new Uint8ClampedArray(256);
+    for (let v = 0; v < 256; v++) {
+      lut[v] = 255 * Math.pow(Math.max(0, Math.min(1, (v - lo) / (hi - lo))), gamma);
+    }
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = lut[data[i]]; data[i + 1] = lut[data[i + 1]]; data[i + 2] = lut[data[i + 2]];
+    }
+  }
+
   const lum = new Float32Array(n);
   for (let i = 0, p = 0; i < data.length; i += 4, p++) {
     lum[p] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
   }
 
-  // 2. Edge-preserving denoise: blur flat skin, keep strong edges as they were.
-  const soft = boxBlurChannel(boxBlurChannel(lum, w, h, 1), w, h, 1);
+  // 2. Edge-preserving denoise: blur flat skin, keep strong edges as they were. The
+  //    thresholds follow the measured noise level, because brightening a dim frame
+  //    multiplies its sensor noise and a fixed threshold would let it through.
+  let soft = boxBlurChannel(boxBlurChannel(lum, w, h, 1), w, h, 1);
+  const noiseSamples: number[] = [];
+  for (let p = 0; p < n; p += 11) noiseSamples.push(Math.abs(lum[p] - soft[p]));
+  noiseSamples.sort((a, b) => a - b);
+  const sigma = (noiseSamples[Math.floor(noiseSamples.length / 2)] || 0) * 1.4826;
+  if (sigma > 3.2) soft = boxBlurChannel(boxBlurChannel(soft, w, h, 2), w, h, 1);
+  const edgeLow = Math.max(5, sigma * 2.6);
+  const edgeHigh = Math.max(18, sigma * 7);
   const denoised = new Float32Array(n);
   for (let p = 0; p < n; p++) {
     const edge = Math.abs(lum[p] - soft[p]);
-    const keep = smoothstep(5, 18, edge);
+    const keep = smoothstep(edgeLow, edgeHigh, edge);
     denoised[p] = soft[p] * (1 - keep) + lum[p] * keep;
   }
 
@@ -877,10 +918,13 @@ function enhancePalmCanvasForDisplay(source: HTMLCanvasElement) {
     const b = base[p];
     const fineDiff = b - fine[p];
     const broadDiff = b - broad[p];
-    const fineGain = 0.9 * smoothstep(1.2, 4.5, Math.abs(fineDiff));
+    const fineGain = 0.9 * smoothstep(1.2 + sigma * 0.5, 4.5 + sigma * 1.2, Math.abs(fineDiff));
     // Dark valleys (negative broadDiff) are the creases: favour deepening those.
     const broadGain = broadDiff < 0 ? 0.62 : 0.3;
-    const target = Math.max(0, Math.min(255, b + fineDiff * fineGain + broadDiff * broadGain));
+    // Cap the boost so strong silhouette edges (hand against background) cannot grow
+    // bright halos; real creases need far less than this.
+    const boost = Math.max(-26, Math.min(14, fineDiff * fineGain + broadDiff * broadGain));
+    const target = Math.max(0, Math.min(255, b + boost));
     const original = lum[p];
     const i = p * 4;
     if (original < 1) {
