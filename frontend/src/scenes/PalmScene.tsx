@@ -1468,6 +1468,10 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
   ] as Array<[string, boolean]>, [validation, cameraQuality]);
 
   const cameraReady = cameraQuality.focusOkay && cameraQuality.lightingOkay;
+  // The photo is already on screen while the crease candidates are extracted and the
+  // vision analysis runs (a few seconds). isBurstCapturing stays true for that whole time
+  // and is cleared in the same step that writes the final "guides mapped" status.
+  const analyzing = !!capturedPalm && isBurstCapturing;
   // Capture now REQUIRES a working hand detector. Without landmarks there is no palm
   // rectification, no palm mask and no anatomical frame, so any lines produced are
   // guesses dressed up with confidence percentages - the hand's own silhouette gets
@@ -1932,6 +1936,16 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
         <div className={`camera-stage glass-panel ${capturedPalm ? 'captured' : ''} ${stream ? 'validating' : ''} ${validation.ready ? 'palm-ready' : ''}`}>
           {!capturedPalm && <video ref={videoRef} className={mirrorCameraRef.current ? '' : 'camera-native'} autoPlay playsInline muted />}
           {capturedPalm && <img className="captured-palm" src={capturedPalm} alt="Normalized captured palm" />}
+          {analyzing && (
+            <div className="palm-analyzing" role="status" aria-live="polite">
+              <div className="palm-scan-line" aria-hidden="true" />
+              <div className="palm-analyzing-card">
+                <span className="palm-spinner" aria-hidden="true" />
+                <strong>Reading your palm lines…</strong>
+                <small>Finding the creases and mapping the guides · this takes a few seconds</small>
+              </div>
+            </div>
+          )}
           {!stream && !capturedPalm && <div className="camera-placeholder">✋<span>Open the palm camera to begin</span></div>}
 
           {!capturedPalm && stream && (
@@ -1987,7 +2001,7 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
             </button>
           )}
 
-          <div className={`camera-status ${captureEnabled ? 'ready' : ''}`}><span className="live-dot" /> {status}</div>
+          <div className={`camera-status ${captureEnabled ? 'ready' : ''}`}>{analyzing ? <span className="palm-spinner small" aria-hidden="true" /> : <span className="live-dot" />} {status}</div>
           <div className="camera-actions">
             <button className="ghost-btn" onClick={startCamera}>{capturedPalm ? 'Retake Palm' : 'Open Palm Camera'}</button>
             {!capturedPalm && <button className="primary-btn" onClick={capture} disabled={!captureEnabled}>{isBurstCapturing ? 'Selecting Best Frame…' : 'Capture Palm'}</button>}
@@ -2026,7 +2040,9 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
               </div>;
             })}</div>
             <div className="disclaimer">Traditional palmistry-style demo only. MediaPipe is used for capture validation/cropping when available. After capture, a vision model traces visually discernible major creases and returns normalized coordinates used to draw the guides. Clear traces are drawn solid; moderate-confidence traces are drawn as approximate dashed guides. Where no crease could be traced, a dotted <em>estimated</em> guide is placed from hand-landmark geometry — that guide reflects typical palm anatomy, not a crease observed in your photograph. These are approximate visual annotations, not medical, biometric or scientific measurements.</div>
-          </> : <div className="empty-result">Capture a validated palm to populate the synchronized interpretation panel.</div>}
+          </> : analyzing
+            ? <div className="empty-result analyzing-result"><span className="palm-spinner" aria-hidden="true" />Analyzing your palm… the line readings will appear here.</div>
+            : <div className="empty-result">Capture a validated palm to populate the synchronized interpretation panel.</div>}
         </div>
       </div>
       <button className="primary-btn scene-next" onClick={onNext}>Open the Cosmic Thread →</button>
