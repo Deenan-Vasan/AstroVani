@@ -2029,8 +2029,7 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
                 : line.status === 'approximate' ? `approximate · ${Math.round(line.confidence * 100)}%`
                 : line.status === 'estimated' ? 'estimated position'
                 : 'not clear';
-              const body = line.status === 'detected' ? line.traditionalReading
-                : line.status === 'approximate' ? `Approximate vision trace from the captured palm. ${line.traditionalReading}`
+              const body = line.status === 'detected' || line.status === 'approximate' ? line.traditionalReading
                 : line.status === 'estimated' ? `Not traced in the photo. This guide is positioned from your hand's landmark geometry, so treat it as indicative only. ${line.traditionalReading}`
                 : 'This crease was not clear enough in the captured image to draw a reliable guide. Try a brighter, sharper retake.';
               // `line-<id>` carries the same accent colour the overlay trace uses, so a

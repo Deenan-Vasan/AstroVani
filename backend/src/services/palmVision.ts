@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { config } from '../config.js';
+import { palmLineSpecifics } from './palmTraits.js';
 
 const pointSchema = z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]);
 const lineSchema = z.object({
@@ -329,6 +330,10 @@ Return JSON ONLY with exactly this shape:
     }
 
     const drawable = status !== 'not_clear';
+    const observation = status === 'detected' && typeof candidate?.observation === 'string'
+      ? candidate.observation.trim().toLowerCase()
+      : 'indeterminate';
+    const specifics = drawable ? palmLineSpecifics({ id, name: NAMES[id], status, observation, points }) : undefined;
     return {
       id,
       name: NAMES[id],
@@ -336,11 +341,9 @@ Return JSON ONLY with exactly this shape:
       status,
       confidence: drawable ? fusedConfidence : Math.min(fusedConfidence, 0.37),
       visibility: drawable ? visibility(fusedConfidence) : 'unclear' as const,
-      observation: status === 'detected' && typeof candidate?.observation === 'string'
-        ? candidate.observation.trim().toLowerCase()
-        : 'indeterminate',
+      observation,
       points: drawable ? points : [],
-      traditionalReading: READINGS[id]
+      traditionalReading: specifics ?? READINGS[id]
     };
   });
 

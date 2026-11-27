@@ -832,8 +832,14 @@ html, body, #root { height: 100%; overflow: hidden; }
 /* Palmistry scrolls: the capture stage plus the observations list is taller than the
    viewport, and the shared scene rules clip everything. Let this scene scroll instead. */
 .scene-wrap.palm-scene { height: 100%; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #4a385b transparent; padding-bottom: 28px; }
-.palm-scene .palm-layout { height: auto; min-height: 560px; align-items: stretch; }
-.palm-scene .camera-stage { height: auto; min-height: 560px; }
+.palm-scene .palm-layout { height: auto; min-height: 0; align-items: start; }
+/* The palm image fits the viewport (no scrolling to see the whole palm); the readings
+   panel beside it scrolls with the page, and the image stays pinned while it does. */
+.palm-scene .camera-stage { height: clamp(420px, calc(100vh - 250px), 720px); min-height: 0; position: sticky; top: 0; }
+/* Once captured, the stage takes the photo's own 4:5 shape so the whole palm shows
+   without cropping or scrolling; the readings panel gets the remaining width. */
+.palm-scene .palm-layout:has(.camera-stage.captured) { grid-template-columns: auto minmax(320px, 1fr); }
+.palm-scene .camera-stage.captured { aspect-ratio: 4 / 5; width: auto; }
 .palm-scene .palm-result { overflow: visible; }
 .palm-scene .scene-next { margin-bottom: 8px; }
 
