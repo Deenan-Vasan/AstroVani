@@ -194,9 +194,10 @@ app.post('/api/agora/agent/speak', async (req, res) => {
   const agentId = String(req.body?.agentId || '');
   const text = String(req.body?.text || '').trim();
   const interruptable = req.body?.interruptable !== false;
+  const priority = ['INTERRUPT', 'APPEND', 'IGNORE'].includes(String(req.body?.priority)) ? (req.body.priority as 'INTERRUPT' | 'APPEND' | 'IGNORE') : undefined;
   if (!agentId || !text) return res.status(400).json({ error: 'agentId and text are required' });
   try {
-    await speakAgoraAgent(agentId, text, interruptable);
+    await speakAgoraAgent(agentId, text, interruptable, priority);
     return res.json({ success: true });
   } catch (error) {
     console.error('Agora agent speak failed:', error);

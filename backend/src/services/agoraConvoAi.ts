@@ -406,7 +406,14 @@ export async function updateAgoraAgentLanguage(agentId: string, language: string
   return responseText ? JSON.parse(responseText) : { success: true };
 }
 
-export async function speakAgoraAgent(agentId: string, text: string, interruptable = true) {
+export type SpeakPriority = 'INTERRUPT' | 'APPEND' | 'IGNORE';
+
+/**
+ * `priority` is Agora's own field: INTERRUPT stops what the agent is saying and speaks now,
+ * APPEND queues behind the current speech, IGNORE drops the message while it is speaking.
+ * Left undefined the previous default is kept.
+ */
+export async function speakAgoraAgent(agentId: string, text: string, interruptable = true, priority?: SpeakPriority) {
   const response = await fetch(
     `${config.agora.convoAiBaseUrl}/${config.agora.appId}/agents/${encodeURIComponent(agentId)}/speak`,
     {
@@ -418,7 +425,7 @@ export async function speakAgoraAgent(agentId: string, text: string, interruptab
       },
       body: JSON.stringify({
         text,
-        priority: 'high',
+        priority: priority ?? 'high',
         interruptable
       })
     }

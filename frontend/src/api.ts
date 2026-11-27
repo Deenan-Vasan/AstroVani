@@ -65,9 +65,9 @@ export async function updateAgentChart(agentId: string, profile: BirthProfile) {
   }));
 }
 
-export async function speakAgoraAgent(agentId: string, text: string, interruptable = true) {
+export async function speakAgoraAgent(agentId: string, text: string, interruptable = true, priority?: 'INTERRUPT' | 'APPEND' | 'IGNORE') {
   return json<{ success: boolean }>(await fetch(apiUrl('/api/agora/agent/speak'), {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId, text, interruptable })
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agentId, text, interruptable, priority })
   }));
 }
 

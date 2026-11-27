@@ -14,17 +14,15 @@ import {
   birthSkyIntro, cosmicThreadIntro, detectScriptLanguage, isLocalizedNextSectionRequest, kundliIntro, localizedChapterRequest,
   isLocalizedGuidanceRequest, localizedGuidanceKind, mentionsLocalizedKundliSubject,
   localizedPlanetMentions, nextLanguage, palmLineFallback, palmLineFromLocalizedText, palmOpening, palmRetakeMessage,
-  palmistryIntro, sceneFromLocalizedTransition, stripQuotedText, transitionSentence,
+  palmistryIntro, placeNotFoundLine, sceneFromLocalizedTransition, stripQuotedText, transitionSentence,
   type LangCode
 } from './lib/language';
 
 /*
- * ERROR-PATH PLACEHOLDER ONLY.
- *
- * The live chart now comes from the backend generator, seeded by the birth details, so
- * every user gets their own. This constant renders only if `/api/session` fails outright.
- * In that case the agent will have been briefed on a different chart, so treat its
- * appearance as a bug signal rather than a normal state.
+ * Placeholder that fills the chart state BEFORE the cosmic profile exists (the Arrival
+ * screen shows no chart). It must never be shown as a user's chart: when the chart cannot
+ * be calculated, completeProfile() now keeps the chapters locked and asks the user to
+ * rephrase their birth place instead of falling back to this sample.
  */
 const fallbackChart: ChartData = {
   lagna: 'Scorpio', moonSign: 'Gemini', nakshatra: 'Punarvasu · Pada 2', dasha: 'Venus / Mercury',
@@ -773,7 +771,15 @@ export default function App() {
   const palmLineFallbackRequestRef = useRef<{ id: number; line: PalmLineId; at: number } | null>(null);
   const palmLineFallbackSeqRef = useRef(0);
   const palmResultRef = useRef<PalmResult | null>(null);
-  const agentSpeakRef = useRef<((text: string, options?: { interruptable?: boolean }) => Promise<void>) | null>(null);
+  const agentSpeakRef = useRef<((text: string, options?: { interruptable?: boolean; priority?: 'INTERRUPT' | 'APPEND' | 'IGNORE' }) => Promise<void>) | null>(null);
+  // Set when the user clicks a chapter in the journey rail, so the next chapter intro
+  // INTERRUPTS whatever the agent is still saying instead of queuing behind it.
+  const interruptNextIntroRef = useRef(false);
+  const introSpeakOptions = () => {
+    const interrupt = interruptNextIntroRef.current;
+    interruptNextIntroRef.current = false;
+    return interrupt ? { interruptable: true, priority: 'INTERRUPT' as const } : { interruptable: true };
+  };
   const lastGuidanceUiSignalAtRef = useRef(0);
   // ASR providers can split "show the mantra for Jupiter" into two final-looking
   // user packets. Keep the first guidance intent alive long enough for a trailing
@@ -790,7 +796,7 @@ export default function App() {
   const languageRef = useRef<LangCode>('en');
   // Latest chart and speak function for timers that must survive re-renders.
   const introChartRef = useRef<ChartData | undefined>(undefined);
-  const introSpeakRef = useRef<((text: string, options?: { interruptable?: boolean }) => Promise<unknown>) | undefined>(undefined);
+  const introSpeakRef = useRef<((text: string, options?: { interruptable?: boolean; priority?: 'INTERRUPT' | 'APPEND' | 'IGNORE' }) => Promise<unknown>) | undefined>(undefined);
   // What the user has said since the agent last finished a reply, and whether the agent's
   // answer to it has already been checked for being in the right language.
   const recentUserTextsRef = useRef<string[]>([]);
@@ -854,8 +860,8 @@ export default function App() {
     setTranscript(prev => prev[prev.length - 1] === line ? prev : [...prev, line]);
   }, []);
 
-  const completeProfile = useCallback(async (birthProfile: BirthProfile, source: 'voice' | 'typed') => {
-    if (profileCompletedRef.current) return;
+  const completeProfile = useCallback(async (birthProfile: BirthProfile, source: 'voice' | 'typed'): Promise<boolean> => {
+    if (profileCompletedRef.current) return false;
     profileCompletedRef.current = true;
     setLoading(true);
     setProfile(birthProfile);
@@ -881,12 +887,31 @@ export default function App() {
       // synchronized to Jyotishi's explicit Birth Sky transition (tool signal
       // or the matching final spoken turn handled below).
       if (source === 'typed') setScene('sky');
-    } catch {
-      setChart(fallbackChart);
-      if (source === 'typed') setScene('sky');
+      setJourneyUnlocked(true);
+      return true;
+    } catch (error) {
+      // Do NOT fall back to a sample chart: the user would be shown (and told about) a
+      // chart that is not theirs. Keep the chapters locked, forget the place that failed,
+      // and ask for a nearby larger town so the next answer re-runs the calculation.
+      const message = error instanceof Error ? error.message : '';
+      console.warn('[AstroVani] Birth chart could not be created; asking for the birth place again.', message);
+      profileCompletedRef.current = false;
+      setProfile(undefined);
+      setJourneyUnlocked(false);
+      const { place: failedPlace, ...withoutPlace } = birthProfile;
+      profileProgressRef.current = withoutPlace;
+      setProfileProgress(withoutPlace);
+      pendingBirthSkySignalRef.current = false;
+      pendingChapterSignalRef.current = null;
+      birthSkyTransitionPhraseRef.current = false;
+      birthSkyAnnouncementRef.current = false;
+      const speak = agentSpeakRef.current;
+      const line = placeNotFoundLine(/could not be resolved/i.test(message) ? failedPlace : undefined, languageRef.current);
+      if (speak) void speak(line, { interruptable: true, priority: 'INTERRUPT' }).catch(() => undefined);
+      else appendTranscript(`Jyotishi: ${line}`);
+      return false;
     } finally {
       setLoading(false);
-      setJourneyUnlocked(true);
     }
   }, [appendTranscript]);
 
@@ -1404,7 +1429,7 @@ export default function App() {
       profileProgressRef.current = next;
       setProfileProgress(next);
       if (next.name && next.date && next.time && next.place) {
-        await completeProfile({
+        const created = await completeProfile({
           name: next.name,
           date: next.date,
           time: next.time,
@@ -1416,7 +1441,7 @@ export default function App() {
         // asynchronous profile extractor was still processing the user's final
         // answer. Only the exact final phrase can set birthSkyTransitionPhraseRef,
         // so ordinary mentions such as "to open your Birth Sky..." cannot open it.
-        if (birthSkyTransitionPhraseRef.current && scene === 'intro') {
+        if (created && birthSkyTransitionPhraseRef.current && scene === 'intro') {
           console.log('[AstroVani] Profile reached 4/4 after completed Birth Sky transition; opening Birth Sky now.');
           pendingChapterSignalRef.current = null;
           pendingBirthSkySignalRef.current = false;
@@ -1434,6 +1459,23 @@ export default function App() {
       extractionBusyRef.current = false;
     }
   }, [completeProfile, scene, startPacedHighlights, clearPacedHighlights, chart, commitChapterScene]);
+
+  /**
+   * The user clicked a chapter in the journey rail. Go through the same commit path the
+   * voice navigation uses (it resets the chapter's intro, highlights and timers) and make
+   * the new chapter's introduction INTERRUPT whatever Jyotishi is still saying. Without
+   * this the old chapter's speech finished first and the new intro waited behind it.
+   */
+  const handleJourneyChange = useCallback((next: SceneName) => {
+    if (next === scene) return;
+    if (next !== 'intro' && !profileCompletedRef.current) return;
+    if (next !== 'intro') {
+      interruptNextIntroRef.current = true;
+      // Never leave the flag armed if the intro does not run (e.g. not connected).
+      window.setTimeout(() => { interruptNextIntroRef.current = false; }, 4000);
+    }
+    commitChapterScene(next, 'journey rail click');
+  }, [scene, commitChapterScene]);
 
   const handleUiSignal = useCallback((signal: UiSignal) => {
     const chapterMap: Partial<Record<UiSignal['target'], SceneName>> = {
@@ -1666,7 +1708,7 @@ export default function App() {
       const sun = liveChart.planets.find(p => p.name === 'Sun');
       const intro = birthSkyIntro(sun ? { sign: sun.sign, house: sun.house, degree: sun.degree } : undefined, languageRef.current);
       console.log('[AstroVani] Starting automatic Birth Sky introduction.');
-      void introSpeakRef.current?.(intro, { interruptable: true });
+      void introSpeakRef.current?.(intro, introSpeakOptions());
     }, 650);
 
     return () => {
@@ -1693,7 +1735,7 @@ export default function App() {
       kundliIntroSpokenRef.current = true;
       const intro = kundliIntro({ lagna: chart.lagna, moonSign: chart.moonSign, dasha: chart.dasha }, languageRef.current);
       console.log('[AstroVani] Starting automatic Kundli introduction.');
-      void speak(intro, { interruptable: true }).catch((error) => {
+      void speak(intro, introSpeakOptions()).catch((error) => {
         kundliIntroSpokenRef.current = false;
         console.warn('[AstroVani] Automatic Kundli introduction failed; will retry while the chapter remains open.', error);
       });
@@ -1719,7 +1761,7 @@ export default function App() {
       palmIntroSpokenRef.current = true;
       const intro = palmistryIntro(languageRef.current);
       console.log('[AstroVani] Starting automatic Palmistry introduction.');
-      void speak(intro, { interruptable: true }).catch((error) => {
+      void speak(intro, introSpeakOptions()).catch((error) => {
         palmIntroSpokenRef.current = false;
         console.warn('[AstroVani] Automatic Palmistry introduction failed; will retry while the chapter remains open.', error);
       });
@@ -1743,7 +1785,7 @@ export default function App() {
       threadIntroSpokenRef.current = true;
       console.log('[AstroVani] Starting automatic Cosmic Thread introduction.');
       const intro = cosmicThreadIntro(languageRef.current);
-      void speak(intro, { interruptable: true }).catch(error => {
+      void speak(intro, introSpeakOptions()).catch(error => {
         threadIntroSpokenRef.current = false;
         console.warn('[AstroVani] Automatic Cosmic Thread introduction failed; will retry while the chapter remains open.', error);
       });
@@ -1938,7 +1980,7 @@ export default function App() {
     <div className="app-shell">
       <TopBar scene={scene} connectionState={agora.state} />
       <main className="app-main">
-        <JourneyRail scene={scene} onChange={setScene} unlocked={journeyUnlocked} />
+        <JourneyRail scene={scene} onChange={handleJourneyChange} unlocked={journeyUnlocked} />
         <section className="stage">
           {scene === 'intro' && <BirthForm
             onStartVoice={startVoice}

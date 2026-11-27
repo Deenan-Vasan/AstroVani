@@ -55,7 +55,8 @@ type CameraInfo = {
 };
 
 const EMPTY_QUALITY: CameraQuality = { brightness: 0, sharpness: 0, lightingOkay: false, focusOkay: false, score: 0 };
-const GUIDE = { left: 0.19, right: 0.81, top: 0.07, bottom: 0.93 };
+// Slightly wider than the drawn guide: it is a framing aid, not a hard border.
+const GUIDE = { left: 0.14, right: 0.86, top: 0.04, bottom: 0.97 };
 
 function normalizePalmLine(name: string): PalmLineId | undefined {
   const normalized = name.trim().toLowerCase().replace(/\s+/g, '_');
@@ -84,13 +85,13 @@ function validatePalm(points: NormalizedLandmark[], previousCenter?: { x: number
   const area = width * height;
   const center = { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
   const insideGuide = b.minX > GUIDE.left && b.maxX < GUIDE.right && b.minY > GUIDE.top && b.maxY < GUIDE.bottom;
-  const sizeOkay = area > 0.13 && area < 0.47 && height > 0.5;
+  const sizeOkay = area > 0.09 && area < 0.56 && height > 0.4;
 
   // Require four fingers to look extended relative to their MCP joints. This rejects fists
   // and most non-palm captures without pretending to identify palm creases.
   const wrist = points[0];
   const fingerPairs: Array<[number, number]> = [[8, 5], [12, 9], [16, 13], [20, 17]];
-  const extended = fingerPairs.filter(([tip, mcp]) => distance(points[tip], wrist) > distance(points[mcp], wrist) * 1.22).length;
+  const extended = fingerPairs.filter(([tip, mcp]) => distance(points[tip], wrist) > distance(points[mcp], wrist) * 1.12).length;
   const openPalm = extended >= 3;
 
   // Keep the wrist-to-middle-finger axis reasonably vertical so the normalized crop is stable.
@@ -98,14 +99,14 @@ function validatePalm(points: NormalizedLandmark[], previousCenter?: { x: number
   const dx = middleMcp.x - wrist.x;
   const dy = middleMcp.y - wrist.y;
   const angleFromVertical = Math.abs(Math.atan2(dx, -dy) * 180 / Math.PI);
-  const upright = angleFromVertical < 32;
+  const upright = angleFromVertical < 40;
 
-  const steady = previousCenter ? Math.hypot(center.x - previousCenter.x, center.y - previousCenter.y) < 0.035 : false;
+  const steady = previousCenter ? Math.hypot(center.x - previousCenter.x, center.y - previousCenter.y) < 0.055 : false;
   const ready = insideGuide && sizeOkay && openPalm && upright && steady;
 
   let message = 'Palm ready ✓ · hold steady and capture';
   if (!insideGuide) message = 'Move your palm fully inside the highlighted area';
-  else if (!sizeOkay && area <= 0.13) message = 'Move your palm closer to the camera';
+  else if (!sizeOkay && area <= 0.09) message = 'Move your palm closer to the camera';
   else if (!sizeOkay) message = 'Move your palm slightly farther from the camera';
   else if (!openPalm) message = 'Open your fingers and face your palm toward the camera';
   else if (!upright) message = 'Keep your palm upright';
@@ -447,10 +448,10 @@ function measureCanvasQuality(source: HTMLCanvasElement): CameraQuality {
   const sharpness = edgeCount ? edgeSum / edgeCount : 0;
   const darkRatio = dark / lum.length;
   const blownRatio = blown / lum.length;
-  const lightingOkay = brightness >= 55 && brightness <= 215 && darkRatio < 0.18 && blownRatio < 0.18;
+  const lightingOkay = brightness >= 45 && brightness <= 225 && darkRatio < 0.26 && blownRatio < 0.26;
   // Mean two-axis local edge energy. A close, out-of-focus webcam palm usually falls
   // below ~6, while readable skin creases typically produce >7-8 on this 180x225 probe.
-  const focusOkay = sharpness >= 6.0;
+  const focusOkay = sharpness >= 5.0;
   const focusScore = Math.max(0, Math.min(1, (sharpness - 3.5) / 8.5));
   const lightScore = Math.max(0, 1 - Math.abs(brightness - 135) / 125) * (1 - Math.min(0.8, darkRatio + blownRatio));
   return { brightness, sharpness, lightingOkay, focusOkay, score: focusScore * 0.68 + lightScore * 0.32 };
@@ -1431,6 +1432,12 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
   const lastValidLandmarksRef = useRef<NormalizedLandmark[]>([]);
   const lastValidLandmarkAtRef = useRef(0);
   const readySinceRef = useRef<number | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const countdownStartRef = useRef<number | null>(null);
+  const lastEnabledAtRef = useRef(0);
+  const lastCaptureAttemptRef = useRef(0);
+  const captureEnabledRef = useRef(false);
+  const captureFnRef = useRef<() => Promise<void>>(async () => undefined);
   const lastQualityCheckRef = useRef(0);
   const cameraQualityRef = useRef<CameraQuality>(EMPTY_QUALITY);
   const mirrorCameraRef = useRef(true);
@@ -1467,6 +1474,42 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
   // reported as a Life line. Declining to capture is more honest than that.
   const captureEnabled = !!stream && !isBurstCapturing
     && detectorStatus === 'ready' && validation.ready && cameraReady;
+
+  captureEnabledRef.current = captureEnabled;
+  captureFnRef.current = capture;
+
+  // Auto-capture: once every check passes, count down 3 seconds on screen and capture by
+  // itself. A single dropped detection frame must not restart the count, so it is only
+  // cancelled after the checks have stayed unsatisfied for 0.7s. After a refused capture
+  // (too soft or too dark) it waits a moment before arming again.
+  useEffect(() => {
+    if (capturedPalm || !stream) {
+      countdownStartRef.current = null;
+      setCountdown(null);
+      return;
+    }
+    const COUNTDOWN_MS = 3000;
+    const id = window.setInterval(() => {
+      const now = performance.now();
+      if (captureEnabledRef.current && now - lastCaptureAttemptRef.current > 2500) {
+        lastEnabledAtRef.current = now;
+        countdownStartRef.current ??= now;
+        const left = Math.ceil((COUNTDOWN_MS - (now - countdownStartRef.current)) / 1000);
+        if (left <= 0) {
+          countdownStartRef.current = null;
+          setCountdown(null);
+          lastCaptureAttemptRef.current = now;
+          void captureFnRef.current();
+        } else {
+          setCountdown(prev => (prev === left ? prev : left));
+        }
+      } else if (countdownStartRef.current !== null && now - lastEnabledAtRef.current > 700) {
+        countdownStartRef.current = null;
+        setCountdown(null);
+      }
+    }, 150);
+    return () => window.clearInterval(id);
+  }, [capturedPalm, stream]);
 
   async function ensureDetector() {
     if (detectorRef.current) return detectorRef.current;
@@ -1557,7 +1600,7 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
 
             if (next.ready) {
               readySinceRef.current ??= now;
-              if (now - readySinceRef.current < 500) {
+              if (now - readySinceRef.current < 250) {
                 next.ready = false;
                 next.message = 'Great position · hold steady…';
               }
@@ -1760,10 +1803,12 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
       const best = candidates[0];
       if (!best) throw new Error('No camera frame was available.');
 
-      if (!best.quality.lightingOkay || !best.quality.focusOkay) {
+      // The live gate (sharpness 5.0) already passed; only refuse here for clearly bad frames.
+      if (best.quality.brightness < 38 || best.quality.brightness > 232 || best.quality.sharpness < 4.2) {
         setCameraQuality(best.quality);
         cameraQualityRef.current = best.quality;
-        setStatus(!best.quality.focusOkay
+        lastCaptureAttemptRef.current = performance.now();
+        setStatus(best.quality.sharpness < 4.2
           ? 'Capture paused · move slightly farther from the lens and hold steady for sharper focus'
           : 'Capture paused · use brighter, even light and avoid glare on the palm');
         setIsBurstCapturing(false);
@@ -1881,7 +1926,7 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
       <div className="scene-copy">
         <div className="eyebrow">CHAPTER 04 · YOUR COSMIC IMPRINT</div>
         <h2>The sky is one map. Your palm is another.</h2>
-        <p>Position one open palm inside the guided window. Capture is enabled only when the hand is visible, centered, open, upright and steady.</p>
+        <p>Hold one open palm inside the guided window. When everything is ready it captures automatically after a 3-second countdown.</p>
       </div>
       <div className="palm-layout">
         <div className={`camera-stage glass-panel ${capturedPalm ? 'captured' : ''} ${stream ? 'validating' : ''} ${validation.ready ? 'palm-ready' : ''}`}>
@@ -1898,8 +1943,9 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
                 {cameraInfo && <small>{cameraInfo.width || 'Auto'}×{cameraInfo.height || 'Auto'}{cameraInfo.continuousFocus ? ' · AF' : ''}</small>}
               </div>
               <div className={`hand-guide ${validation.ready && cameraReady ? 'ready' : ''}`}>
-                <div className="palm-guide-copy"><strong>{validation.ready && cameraReady ? 'Palm ready ✓' : validation.ready ? 'Hold for focus…' : 'Place palm here'}</strong><span>Fingers open · palm upright</span></div>
+                <div className="palm-guide-copy"><strong>{countdown !== null ? `Capturing in ${countdown}…` : validation.ready && cameraReady ? 'Palm ready ✓' : validation.ready ? 'Hold for focus…' : 'Place palm here'}</strong><span>{countdown !== null ? 'Hold still · move your hand to cancel' : 'Fingers open · palm upright'}</span></div>
               </div>
+              {countdown !== null && <div className="palm-countdown" key={countdown} aria-live="assertive"><span>{countdown}</span></div>}
               <div className="palm-readiness" aria-live="polite">
                 {readiness.map(([label, ok]) => <span key={label} className={ok ? 'ok' : ''}>{ok ? '✓' : '○'} {label}</span>)}
               </div>

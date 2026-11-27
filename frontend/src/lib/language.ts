@@ -425,6 +425,25 @@ export function palmistryIntro(lang: LangCode): string {
   return 'Palmistry is now open. Please open the Palm Camera, place one open palm inside the guide, and capture your palm when it is centered, upright, and steady. After the capture, I can guide you through the Heart line, Head line, Life line, and Fate line step by step.';
 }
 
+/** Spoken when the birth place could not be found, so no chart was made. Never name a chart that is not theirs. */
+export function placeNotFoundLine(place: string | undefined, lang: LangCode): string {
+  const t = translatedLang(lang);
+  const named = place?.trim();
+  if (t === 'hi') {
+    return named
+      ? `मुझे "${named}" जगह नहीं मिल पाई। क्या आप पास का कोई बड़ा शहर या ज़िला बता सकते हैं?`
+      : 'मैं अभी आपकी कुंडली तैयार नहीं कर पाया। कृपया अपना जन्म स्थान फिर से बताइए, या पास का कोई बड़ा शहर बताइए।';
+  }
+  if (t === 'ta') {
+    return named
+      ? `"${named}" என்ற இடத்தை என்னால் கண்டுபிடிக்க முடியவில்லை. அருகிலுள்ள ஒரு பெரிய நகரம் அல்லது மாவட்டத்தைச் சொல்ல முடியுமா?`
+      : 'இப்போது உங்கள் ஜாதகத்தைத் தயாரிக்க முடியவில்லை. உங்கள் பிறந்த இடத்தை மீண்டும் சொல்லுங்கள், அல்லது அருகிலுள்ள பெரிய நகரத்தைச் சொல்லுங்கள்.';
+  }
+  return named
+    ? `I could not find "${named}" on my map, so I cannot make your chart yet. Could you tell me a larger town or the district nearby?`
+    : 'I could not prepare your chart just now. Please tell me your birth place again, or a larger town nearby.';
+}
+
 export function cosmicThreadIntro(lang: LangCode): string {
   const t = translatedLang(lang);
   if (t === 'hi') {

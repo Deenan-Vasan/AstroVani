@@ -836,3 +836,8 @@ html, body, #root { height: 100%; overflow: hidden; }
 .palm-scene .camera-stage { height: auto; min-height: 560px; }
 .palm-scene .palm-result { overflow: visible; }
 .palm-scene .scene-next { margin-bottom: 8px; }
+
+/* Auto-capture countdown */
+.palm-countdown { position: absolute; left: 50%; top: 42%; transform: translate(-50%,-50%); z-index: 6; pointer-events: none; width: 108px; height: 108px; border-radius: 50%; display: grid; place-items: center; background: rgba(8,6,16,.62); border: 2px solid rgba(140,240,188,.9); box-shadow: 0 0 40px rgba(99,230,163,.35); animation: palmCountdownPulse 1s ease-out; }
+.palm-countdown span { font-family: Georgia, serif; font-size: 58px; line-height: 1; color: #bff7d8; }
+@keyframes palmCountdownPulse { 0% { transform: translate(-50%,-50%) scale(1.25); opacity: .4; } 100% { transform: translate(-50%,-50%) scale(1); opacity: 1; } }
