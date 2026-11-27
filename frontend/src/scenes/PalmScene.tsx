@@ -3,6 +3,7 @@ import { FilesetResolver, HandLandmarker, type NormalizedLandmark } from '@media
 import { analyzePalm } from '../api';
 import type { PalmResult } from '../types';
 import type { ICameraVideoTrack } from 'agora-rtc-sdk-ng';
+import { palmLineSpecifics } from './palmTraits';
 import { extractPalmCvCandidates, type PalmCvCandidate } from './palmCv';
 
 export type PalmLineId = 'heart_line' | 'head_line' | 'life_line' | 'fate_line';
@@ -2029,8 +2030,9 @@ export function PalmScene({ onNext, focusLine, agoraCameraTrack, onAnalyzed }: P
                 : line.status === 'approximate' ? `approximate · ${Math.round(line.confidence * 100)}%`
                 : line.status === 'estimated' ? 'estimated position'
                 : 'not clear';
-              const body = line.status === 'detected' ? line.traditionalReading
-                : line.status === 'approximate' ? `Approximate vision trace from the captured palm. ${line.traditionalReading}`
+              const specifics = palmLineSpecifics(line);
+              const body = line.status === 'detected' ? (specifics ?? line.traditionalReading)
+                : line.status === 'approximate' ? (specifics ?? line.traditionalReading)
                 : line.status === 'estimated' ? `Not traced in the photo. This guide is positioned from your hand's landmark geometry, so treat it as indicative only. ${line.traditionalReading}`
                 : 'This crease was not clear enough in the captured image to draw a reliable guide. Try a brighter, sharper retake.';
               // `line-<id>` carries the same accent colour the overlay trace uses, so a
