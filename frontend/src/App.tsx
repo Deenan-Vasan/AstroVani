@@ -729,6 +729,12 @@ export default function App() {
   const transcriptRef = useRef<string[]>([]);
   const extractionBusyRef = useRef(false);
   const profileCompletedRef = useRef(false);
+  // True only once the chart has actually been calculated for this user. A chapter must
+  // never open before that: the screen would show the sample chart. If Jyotishi announces
+  // a chapter while the chart is still being calculated, the move is parked here and
+  // replayed when the chart arrives (or dropped if the calculation fails).
+  const chartReadyRef = useRef(false);
+  const deferredSceneRef = useRef<{ scene: SceneName; reason: string } | null>(null);
   const profileProgressRef = useRef<Partial<BirthProfile>>({});
   const birthSkyTransitionTimerRef = useRef<number | undefined>(undefined);
   const pendingBirthSkySignalRef = useRef(false);
@@ -887,6 +893,7 @@ export default function App() {
       // synchronized to Jyotishi's explicit Birth Sky transition (tool signal
       // or the matching final spoken turn handled below).
       if (source === 'typed') setScene('sky');
+      chartReadyRef.current = true;
       setJourneyUnlocked(true);
       return true;
     } catch (error) {
@@ -896,8 +903,13 @@ export default function App() {
       const message = error instanceof Error ? error.message : '';
       console.warn('[AstroVani] Birth chart could not be created; asking for the birth place again.', message);
       profileCompletedRef.current = false;
+      chartReadyRef.current = false;
+      deferredSceneRef.current = null;
       setProfile(undefined);
       setJourneyUnlocked(false);
+      // If anything already moved the screen off Arrival, bring it back: the other
+      // chapters need the user's chart and there is none.
+      setScene('intro');
       const { place: failedPlace, ...withoutPlace } = birthProfile;
       profileProgressRef.current = withoutPlace;
       setProfileProgress(withoutPlace);
@@ -918,8 +930,13 @@ export default function App() {
   const commitChapterScene = useCallback((nextScene: SceneName, reason: string) => {
     // Nothing past Arrival opens before the cosmic profile exists, even if the user (or
     // the agent) says "open the Kundli" early.
-    if (nextScene !== 'intro' && !profileCompletedRef.current) {
-      console.log('[AstroVani] Ignoring chapter navigation before the cosmic profile is complete:', nextScene);
+    if (nextScene !== 'intro' && !chartReadyRef.current) {
+      if (profileCompletedRef.current) {
+        console.log('[AstroVani] Chart still being calculated; parking chapter navigation:', nextScene);
+        deferredSceneRef.current = { scene: nextScene, reason };
+      } else {
+        console.log('[AstroVani] Ignoring chapter navigation before the cosmic profile is complete:', nextScene);
+      }
       return;
     }
     console.log('[AstroVani] Committing chapter scene:', nextScene, reason);
@@ -1437,6 +1454,14 @@ export default function App() {
           language: next.language || 'Auto'
         }, 'voice');
 
+        // A chapter announced while the chart was still being calculated was parked;
+        // now that the chart exists, open it.
+        if (created && deferredSceneRef.current) {
+          const parked = deferredSceneRef.current;
+          deferredSceneRef.current = null;
+          commitChapterScene(parked.scene, `${parked.reason} (after chart ready)`);
+        }
+
         // Reconcile a transition sentence that may have completed while the
         // asynchronous profile extractor was still processing the user's final
         // answer. Only the exact final phrase can set birthSkyTransitionPhraseRef,
@@ -1468,7 +1493,7 @@ export default function App() {
    */
   const handleJourneyChange = useCallback((next: SceneName) => {
     if (next === scene) return;
-    if (next !== 'intro' && !profileCompletedRef.current) return;
+    if (next !== 'intro' && !chartReadyRef.current) return;
     if (next !== 'intro') {
       interruptNextIntroRef.current = true;
       // Never leave the flag armed if the intro does not run (e.g. not connected).
@@ -1967,6 +1992,8 @@ export default function App() {
     setSpokenPalmLine(undefined);
     setProfile(undefined);
     setJourneyUnlocked(false);
+    chartReadyRef.current = false;
+    deferredSceneRef.current = null;
     profileProgressRef.current = {};
     setProfileProgress({});
     transcriptRef.current = [];
